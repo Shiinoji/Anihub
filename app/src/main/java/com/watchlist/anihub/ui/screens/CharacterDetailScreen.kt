@@ -26,7 +26,6 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import com.watchlist.anihub.R
-import com.watchlist.anihub.data.remote.Character
 import com.watchlist.anihub.ui.components.HeaderIconButton
 import com.watchlist.anihub.ui.components.SimpleAnimeCard
 import com.watchlist.anihub.ui.theme.LocalTitleLanguage
