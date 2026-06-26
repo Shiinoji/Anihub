@@ -22,7 +22,9 @@ import javax.inject.Singleton
 private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "settings")
 
 @Singleton
-class ThemeManager @Inject constructor(@ApplicationContext private val context: Context) {
+class ThemeManager @Inject constructor(
+    @param:ApplicationContext private val context: Context,
+) {
     private val themeModeKey = stringPreferencesKey("theme_mode")
     private val colorPaletteKey = stringPreferencesKey("color_palette")
     private val titleLanguageKey = stringPreferencesKey("title_language")

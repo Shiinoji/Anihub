@@ -29,6 +29,9 @@ import coil.compose.AsyncImage
 import com.watchlist.anihub.R
 import com.watchlist.anihub.data.remote.Media
 import com.watchlist.anihub.ui.components.AnimeCard
+import com.watchlist.anihub.ui.components.AnimeDetailSkeleton
+import com.watchlist.anihub.ui.components.HeaderIconButton
+import com.watchlist.anihub.ui.components.SimpleAnimeCard
 import com.watchlist.anihub.ui.theme.LocalScoreFormat
 import com.watchlist.anihub.ui.theme.LocalShowAiringCountdown
 import com.watchlist.anihub.ui.theme.LocalTitleLanguage
@@ -39,6 +42,7 @@ fun AnimeDetailScreen(
     animeId: Int,
     onBackClick: () -> Unit,
     onAnimeClick: (Int) -> Unit,
+    onCharacterClick: (Int) -> Unit,
     viewModel: AnimeDetailViewModel = hiltViewModel()
 ) {
     val anime by viewModel.animeDetail.collectAsState()
@@ -180,6 +184,29 @@ fun AnimeDetailScreen(
                                     .animateContentSize()
                                     .clickable { expanded = !expanded }
                             )
+
+                            // Genres
+                            media.genres?.let { genres ->
+                                Spacer(modifier = Modifier.height(12.dp))
+                                FlowRow(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    genres.forEach { genre ->
+                                        SuggestionChip(
+                                            onClick = { /* TODO: Filter by genre */ },
+                                            label = { Text(genre, style = MaterialTheme.typography.labelSmall) },
+                                            shape = RoundedCornerShape(16.dp),
+                                            colors = SuggestionChipDefaults.suggestionChipColors(
+                                                containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f),
+                                                labelColor = MaterialTheme.colorScheme.onPrimaryContainer
+                                            ),
+                                            border = null
+                                        )
+                                    }
+                                }
+                            }
                         }
                     }
 
@@ -199,7 +226,9 @@ fun AnimeDetailScreen(
                                 items(characters) { character ->
                                     Column(
                                         horizontalAlignment = Alignment.CenterHorizontally,
-                                        modifier = Modifier.width(80.dp)
+                                        modifier = Modifier
+                                            .width(80.dp)
+                                            .clickable { onCharacterClick(character.id) }
                                     ) {
                                         AsyncImage(
                                             model = character.image.large,
@@ -277,32 +306,7 @@ fun AnimeDetailScreen(
                 }
             }
         } else {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator()
-            }
+            AnimeDetailSkeleton()
         }
-    }
-}
-
-@Composable
-fun HeaderIconButton(
-    icon: ImageVector,
-    onClick: () -> Unit,
-    tint: Color = Color.White
-) {
-    Box(
-        modifier = Modifier
-            .size(44.dp)
-            .clip(CircleShape)
-            .background(Color.Black.copy(alpha = 0.3f))
-            .clickable { onClick() },
-        contentAlignment = Alignment.Center
-    ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = null,
-            tint = tint,
-            modifier = Modifier.size(24.dp)
-        )
     }
 }

@@ -3,6 +3,7 @@ package com.watchlist.anihub.ui
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.watchlist.anihub.data.ThemeManager
+import com.watchlist.anihub.data.UpdateManager
 import com.watchlist.anihub.ui.theme.AiringFormat
 import com.watchlist.anihub.ui.theme.ColorPalette
 import com.watchlist.anihub.ui.theme.ScoreFormat
@@ -18,7 +19,8 @@ import javax.inject.Inject
 
 @HiltViewModel
 class ThemeViewModel @Inject constructor(
-    private val themeManager: ThemeManager
+    private val themeManager: ThemeManager,
+    private val updateManager: UpdateManager,
 ) : ViewModel() {
     val themeMode = themeManager.themeMode.stateIn(
         viewModelScope, SharingStarted.WhileSubscribed(5000), ThemeMode.SYSTEM
@@ -39,7 +41,9 @@ class ThemeViewModel @Inject constructor(
         viewModelScope, SharingStarted.WhileSubscribed(5000), AiringFormat.COUNTDOWN
     )
     val adultContent: StateFlow<Boolean> = themeManager.adultContent.stateIn(
-        viewModelScope, SharingStarted.WhileSubscribed(5000), false
+        scope = viewModelScope, 
+        started = SharingStarted.WhileSubscribed(5000), 
+        initialValue = false
     )
     val showAiringCountdown: StateFlow<Boolean> = themeManager.showAiringCountdown.stateIn(
         viewModelScope, SharingStarted.WhileSubscribed(5000), true
@@ -99,6 +103,12 @@ class ThemeViewModel @Inject constructor(
     fun setNotificationsEnabled(enabled: Boolean) {
         viewModelScope.launch {
             themeManager.setNotificationsEnabled(enabled)
+        }
+    }
+
+    fun checkForUpdates() {
+        viewModelScope.launch {
+            updateManager.checkForUpdates()
         }
     }
 }

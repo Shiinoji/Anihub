@@ -2,11 +2,13 @@ package com.watchlist.anihub.data.remote
 
 import com.squareup.moshi.JsonClass
 import retrofit2.http.Body
+import retrofit2.http.GET
 import retrofit2.http.POST
+import retrofit2.http.Url
 
 @JsonClass(generateAdapter = true)
 data class SingleMediaResponse(
-    val Media: Media
+    val Media: Media,
 )
 
 interface AniListService {
@@ -15,6 +17,12 @@ interface AniListService {
 
     @POST("/")
     suspend fun getAnimeDetail(@Body request: GraphQLRequest): AniListResponse<SingleMediaResponse>
+
+    @POST("/")
+    suspend fun getCharacterDetail(@Body request: GraphQLRequest): AniListResponse<CharacterResponse>
+
+    @GET
+    suspend fun checkForUpdate(@Url url: String): UpdateInfo
 }
 
 object AniListQueries {
@@ -89,6 +97,7 @@ object AniListQueries {
             status
             episodes
             averageScore
+            genres
             nextAiringEpisode {
               airingAt
               timeUntilAiring
@@ -124,6 +133,28 @@ object AniListQueries {
               nextAiringEpisode {
                 episode
                 airingAt
+              }
+            }
+          }
+        }
+    """
+
+    const val CHARACTER_DETAIL = """
+        query (${'$'}id: Int) {
+          Character(id: ${'$'}id) {
+            id
+            name { full }
+            image { large }
+            description
+            gender
+            dateOfBirth { year month day }
+            age
+            bloodType
+            media(type: ANIME, sort: START_DATE_DESC) {
+              nodes {
+                id
+                title { english romaji native }
+                coverImage { extraLarge large medium }
               }
             }
           }

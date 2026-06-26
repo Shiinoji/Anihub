@@ -19,11 +19,15 @@ class NotificationWorker @AssistedInject constructor(
     @Assisted workerParams: WorkerParameters,
     private val aniListService: AniListService,
     private val animeDao: AnimeDao,
-    private val notificationHelper: NotificationHelper
+    private val notificationHelper: NotificationHelper,
+    private val updateManager: UpdateManager
 ) : CoroutineWorker(context, workerParams) {
 
     override suspend fun doWork(): Result {
         try {
+            // Check for App Updates via GitHub
+            updateManager.checkForUpdates()
+
             val watchlist = animeDao.getWatchlist().first()
             if (watchlist.isEmpty()) return Result.success()
 

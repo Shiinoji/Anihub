@@ -11,13 +11,12 @@ import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.RestartAlt
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -27,6 +26,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.watchlist.anihub.BuildConfig
 import com.watchlist.anihub.R
 import com.watchlist.anihub.ui.ThemeViewModel
 import com.watchlist.anihub.ui.theme.*
@@ -46,6 +46,55 @@ fun SettingsScreen(
     val adultContent by viewModel.adultContent.collectAsState()
     val showAiringCountdown by viewModel.showAiringCountdown.collectAsState()
     val notificationsEnabled by viewModel.notificationsEnabled.collectAsState()
+
+    var showTitleDialog by remember { mutableStateOf(false) }
+    var showStaffDialog by remember { mutableStateOf(false) }
+    var showScoreDialog by remember { mutableStateOf(false) }
+    var showAiringDialog by remember { mutableStateOf(false) }
+
+    if (showTitleDialog) {
+        EnumSelectionDialog(
+            title = "Title Language",
+            options = TitleLanguage.entries,
+            selected = titleLanguage,
+            onSelect = { viewModel.setTitleLanguage(it) },
+            onDismiss = { showTitleDialog = false },
+            labelProvider = { it.name.lowercase().replaceFirstChar { c -> c.uppercase() } }
+        )
+    }
+
+    if (showStaffDialog) {
+        EnumSelectionDialog(
+            title = "Staff Name Language",
+            options = StaffNameLanguage.entries,
+            selected = staffLanguage,
+            onSelect = { viewModel.setStaffLanguage(it) },
+            onDismiss = { showStaffDialog = false },
+            labelProvider = { it.name.replace("_", " ").lowercase().replaceFirstChar { c -> c.uppercase() } }
+        )
+    }
+
+    if (showScoreDialog) {
+        EnumSelectionDialog(
+            title = "Score Format",
+            options = ScoreFormat.entries,
+            selected = scoreFormat,
+            onSelect = { viewModel.setScoreFormat(it) },
+            onDismiss = { showScoreDialog = false },
+            labelProvider = { it.name.replace("POINT_", "Point ").replace("_", ".").lowercase().replaceFirstChar { c -> c.uppercase() } }
+        )
+    }
+
+    if (showAiringDialog) {
+        EnumSelectionDialog(
+            title = "Airing Format",
+            options = AiringFormat.entries,
+            selected = airingFormat,
+            onSelect = { viewModel.setAiringFormat(it) },
+            onDismiss = { showAiringDialog = false },
+            labelProvider = { it.name.lowercase().replaceFirstChar { c -> c.uppercase() } }
+        )
+    }
 
     Scaffold(
         topBar = {
@@ -174,48 +223,29 @@ fun SettingsScreen(
 
             // AniList Sync Settings
             SettingsSection(title = "Anime Discovery") {
-                Text("Title Language", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
-                Spacer(modifier = Modifier.height(8.dp))
-                TitleLanguage.entries.forEach { lang ->
-                    SettingsRadioButton(
-                        selected = titleLanguage == lang,
-                        onClick = { viewModel.setTitleLanguage(lang) },
-                        label = lang.name.lowercase().replaceFirstChar { it.uppercase() }
-                    )
-                }
+                SettingsClickableRow(
+                    label = "Title Language",
+                    value = titleLanguage.name.lowercase().replaceFirstChar { it.uppercase() },
+                    onClick = { showTitleDialog = true }
+                )
 
-                Spacer(modifier = Modifier.height(16.dp))
-                Text("Staff Name Language", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
-                Spacer(modifier = Modifier.height(8.dp))
-                StaffNameLanguage.entries.forEach { lang ->
-                    SettingsRadioButton(
-                        selected = staffLanguage == lang,
-                        onClick = { viewModel.setStaffLanguage(lang) },
-                        label = lang.name.replace("_", " ").lowercase().replaceFirstChar { it.uppercase() }
-                    )
-                }
+                SettingsClickableRow(
+                    label = "Staff Name Language",
+                    value = staffLanguage.name.replace("_", " ").lowercase().replaceFirstChar { it.uppercase() },
+                    onClick = { showStaffDialog = true }
+                )
 
-                Spacer(modifier = Modifier.height(16.dp))
-                Text("Score Format", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
-                Spacer(modifier = Modifier.height(8.dp))
-                ScoreFormat.entries.forEach { format ->
-                    SettingsRadioButton(
-                        selected = scoreFormat == format,
-                        onClick = { viewModel.setScoreFormat(format) },
-                        label = format.name.replace("POINT_", "Point ").replace("_", ".").lowercase().replaceFirstChar { it.uppercase() }
-                    )
-                }
+                SettingsClickableRow(
+                    label = "Score Format",
+                    value = scoreFormat.name.replace("POINT_", "Point ").replace("_", ".").lowercase().replaceFirstChar { it.uppercase() },
+                    onClick = { showScoreDialog = true }
+                )
 
-                Spacer(modifier = Modifier.height(16.dp))
-                Text("Airing Format", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
-                Spacer(modifier = Modifier.height(8.dp))
-                AiringFormat.entries.forEach { format ->
-                    SettingsRadioButton(
-                        selected = airingFormat == format,
-                        onClick = { viewModel.setAiringFormat(format) },
-                        label = format.name.lowercase().replaceFirstChar { it.uppercase() }
-                    )
-                }
+                SettingsClickableRow(
+                    label = "Airing Format",
+                    value = airingFormat.name.lowercase().replaceFirstChar { it.uppercase() },
+                    onClick = { showAiringDialog = true }
+                )
 
                 HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp), color = MaterialTheme.colorScheme.outlineVariant)
 
@@ -245,36 +275,132 @@ fun SettingsScreen(
                     icon = ImageVector.vectorResource(R.drawable.bell)
                 )
             }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // About Section
+            SettingsSection(title = "About") {
+                Text(
+                    text = "AniHub v${BuildConfig.VERSION_NAME}",
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = "A modern anime tracker and discovery app built with Jetpack Compose.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+                Button(
+                    onClick = { viewModel.checkForUpdates() },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Text("Check for Updates")
+                }
+            }
         }
     }
 }
 
 @Composable
-fun SettingsRadioButton(
-    selected: Boolean,
-    onClick: () -> Unit,
-    label: String
+fun SettingsClickableRow(
+    label: String,
+    value: String,
+    onClick: () -> Unit
 ) {
-    Row(
+    Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .selectable(
-                selected = selected,
-                onClick = onClick
-            )
-            .padding(vertical = 4.dp),
-        verticalAlignment = Alignment.CenterVertically
+            .clickable { onClick() },
+        color = Color.Transparent
     ) {
-        RadioButton(
-            selected = selected,
-            onClick = onClick
-        )
-        Text(
-            text = label,
-            style = MaterialTheme.typography.bodyLarge,
-            modifier = Modifier.padding(start = 8.dp)
-        )
+        Row(
+            modifier = Modifier
+                .padding(vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = label,
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = value,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                    contentDescription = null,
+                    modifier = Modifier.size(20.dp),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
+                )
+            }
+        }
     }
+}
+
+@Composable
+fun <T> EnumSelectionDialog(
+    title: String,
+    options: List<T>,
+    selected: T,
+    onSelect: (T) -> Unit,
+    onDismiss: () -> Unit,
+    labelProvider: (T) -> String
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(title, style = MaterialTheme.typography.titleLarge) },
+        text = {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState())
+            ) {
+                options.forEach { option ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .selectable(
+                                selected = option == selected,
+                                onClick = {
+                                    onSelect(option)
+                                    onDismiss()
+                                }
+                            )
+                            .padding(vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        RadioButton(
+                            selected = option == selected,
+                            onClick = {
+                                onSelect(option)
+                                onDismiss()
+                            }
+                        )
+                        Text(
+                            text = labelProvider(option),
+                            style = MaterialTheme.typography.bodyLarge,
+                            modifier = Modifier.padding(start = 12.dp)
+                        )
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
 }
 
 @Composable
@@ -330,8 +456,7 @@ fun ThemeOption(
     selected: Boolean,
     onClick: () -> Unit,
     color: Color? = null,
-    icon: @Composable (() -> Unit)? = null,
-    showCheck: Boolean = false
+    icon: @Composable (() -> Unit)? = null
 ) {
     Box(
         modifier = Modifier

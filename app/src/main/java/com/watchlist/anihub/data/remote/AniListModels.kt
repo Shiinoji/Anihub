@@ -18,12 +18,12 @@ data class AniListResponse<T>(
 
 @JsonClass(generateAdapter = true)
 data class MediaResponse(
-    val Page: Page
+    val Page: Page,
 )
 
 @JsonClass(generateAdapter = true)
 data class Page(
-    val media: List<Media>
+    val media: List<Media>,
 )
 
 @JsonClass(generateAdapter = true)
@@ -37,16 +37,17 @@ data class Media(
     val episodes: Int?,
     val averageScore: Int?,
     val nextAiringEpisode: AiringEpisode?,
+    val genres: List<String>?,
     val characters: CharacterConnection?,
-    val recommendations: RecommendationConnection?
+    val recommendations: RecommendationConnection?,
 ) {
     fun getFormattedScore(format: ScoreFormat): String {
         val score = averageScore ?: return "N/A"
         return when (format) {
-            ScoreFormat.POINT_100 -> "$score"
+            ScoreFormat.POINT_100 -> score.toString()
             ScoreFormat.POINT_10_DECIMAL -> "${score / 10.0}"
-            ScoreFormat.POINT_10 -> "${Math.round(score / 10.0)}"
-            ScoreFormat.POINT_5 -> "${Math.round(score / 20.0)}"
+            ScoreFormat.POINT_10 -> "${Math.round(score / 10.0f)}"
+            ScoreFormat.POINT_5 -> "${Math.round(score / 20.0f)}"
             ScoreFormat.POINT_3 -> {
                 when {
                     score >= 75 -> "3"
@@ -96,7 +97,30 @@ data class CharacterConnection(
 data class Character(
     val id: Int,
     val name: CharacterName,
-    val image: CharacterImage
+    val image: CharacterImage,
+    val description: String?,
+    val gender: String?,
+    val dateOfBirth: FuzzyDate?,
+    val age: String?,
+    val bloodType: String?,
+    val media: MediaConnection?
+)
+
+@JsonClass(generateAdapter = true)
+data class FuzzyDate(
+    val year: Int?,
+    val month: Int?,
+    val day: Int?
+)
+
+@JsonClass(generateAdapter = true)
+data class MediaConnection(
+    val nodes: List<Media>?
+)
+
+@JsonClass(generateAdapter = true)
+data class CharacterResponse(
+    val Character: Character
 )
 
 @JsonClass(generateAdapter = true)

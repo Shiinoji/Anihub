@@ -139,6 +139,12 @@ fun MainContent(themeViewModel: ThemeViewModel) {
                 is Screen.AnimeDetail -> AnimeDetailScreen(
                     animeId = screen.id,
                     onBackClick = { navigateBack() },
+                    onAnimeClick = { navigateTo(Screen.AnimeDetail(it)) },
+                    onCharacterClick = { navigateTo(Screen.CharacterDetail(it)) }
+                )
+                is Screen.CharacterDetail -> CharacterDetailScreen(
+                    characterId = screen.id,
+                    onBackClick = { navigateBack() },
                     onAnimeClick = { navigateTo(Screen.AnimeDetail(it)) }
                 )
             }

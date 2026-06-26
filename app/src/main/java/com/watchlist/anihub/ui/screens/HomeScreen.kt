@@ -20,6 +20,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.watchlist.anihub.R
 import com.watchlist.anihub.data.remote.Media
 import com.watchlist.anihub.ui.components.SimpleAnimeCard
+import com.watchlist.anihub.ui.components.SimpleAnimeCardSkeleton
 import com.watchlist.anihub.ui.theme.LocalTitleLanguage
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -94,13 +95,19 @@ fun AnimeSection(
             contentPadding = PaddingValues(horizontal = 16.dp),
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            items(animeList) { anime ->
-                SimpleAnimeCard(
-                    title = anime.title.getDisplayTitle(titleLanguage),
-                    imageUrl = anime.coverImage.extraLarge ?: anime.coverImage.large ?: "",
-                    onClick = { onAnimeClick(anime.id) },
-                    modifier = Modifier.width(140.dp)
-                )
+            if (animeList.isEmpty()) {
+                items(5) {
+                    SimpleAnimeCardSkeleton()
+                }
+            } else {
+                items(animeList) { anime ->
+                    SimpleAnimeCard(
+                        title = anime.title.getDisplayTitle(titleLanguage),
+                        imageUrl = anime.coverImage.extraLarge ?: anime.coverImage.large ?: "",
+                        onClick = { onAnimeClick(anime.id) },
+                        modifier = Modifier.width(140.dp)
+                    )
+                }
             }
         }
     }
