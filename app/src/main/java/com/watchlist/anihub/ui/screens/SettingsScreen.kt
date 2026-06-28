@@ -3,6 +3,7 @@ package com.watchlist.anihub.ui.screens
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -11,6 +12,7 @@ import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.RestartAlt
@@ -183,8 +185,10 @@ fun SettingsScreen(
                 Text("Color Palette", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
                 Spacer(modifier = Modifier.height(12.dp))
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     PaletteOption(
                         selected = colorPalette == ColorPalette.DYNAMIC,
@@ -195,25 +199,67 @@ fun SettingsScreen(
                         selected = colorPalette == ColorPalette.BROWN,
                         onClick = { viewModel.setColorPalette(ColorPalette.BROWN) },
                         colorTop = Color.White,
-                        colorBottom = Color(0xFF795548)
+                        colorBottom = BrownPrimary
                     )
                     PaletteOption(
                         selected = colorPalette == ColorPalette.DEEP_BROWN,
                         onClick = { viewModel.setColorPalette(ColorPalette.DEEP_BROWN) },
                         colorTop = Color.White,
-                        colorBottom = Color(0xFF5D4037)
+                        colorBottom = DeepBrownPrimary
                     )
                     PaletteOption(
                         selected = colorPalette == ColorPalette.PURPLE,
                         onClick = { viewModel.setColorPalette(ColorPalette.PURPLE) },
                         colorTop = Color.White,
-                        colorBottom = Color(0xFF673AB7)
+                        colorBottom = PurplePrimary
                     )
                     PaletteOption(
                         selected = colorPalette == ColorPalette.DEEP_PURPLE,
                         onClick = { viewModel.setColorPalette(ColorPalette.DEEP_PURPLE) },
                         colorTop = Color.White,
-                        colorBottom = Color(0xFF4527A0)
+                        colorBottom = DeepPurplePrimary
+                    )
+                    PaletteOption(
+                        selected = colorPalette == ColorPalette.OCEAN,
+                        onClick = { viewModel.setColorPalette(ColorPalette.OCEAN) },
+                        colorTop = Color.White,
+                        colorBottom = OceanPrimary
+                    )
+                    PaletteOption(
+                        selected = colorPalette == ColorPalette.FOREST,
+                        onClick = { viewModel.setColorPalette(ColorPalette.FOREST) },
+                        colorTop = Color.White,
+                        colorBottom = ForestPrimary
+                    )
+                    PaletteOption(
+                        selected = colorPalette == ColorPalette.CHERRY,
+                        onClick = { viewModel.setColorPalette(ColorPalette.CHERRY) },
+                        colorTop = Color.White,
+                        colorBottom = CherryPrimary
+                    )
+                    PaletteOption(
+                        selected = colorPalette == ColorPalette.SUNSET,
+                        onClick = { viewModel.setColorPalette(ColorPalette.SUNSET) },
+                        colorTop = Color.White,
+                        colorBottom = SunsetPrimary
+                    )
+                    PaletteOption(
+                        selected = colorPalette == ColorPalette.LAVENDER,
+                        onClick = { viewModel.setColorPalette(ColorPalette.LAVENDER) },
+                        colorTop = Color.White,
+                        colorBottom = LavenderPrimary
+                    )
+                    PaletteOption(
+                        selected = colorPalette == ColorPalette.MINT,
+                        onClick = { viewModel.setColorPalette(ColorPalette.MINT) },
+                        colorTop = Color.White,
+                        colorBottom = MintPrimary
+                    )
+                    PaletteOption(
+                        selected = colorPalette == ColorPalette.GOLD,
+                        onClick = { viewModel.setColorPalette(ColorPalette.GOLD) },
+                        colorTop = Color.White,
+                        colorBottom = GoldPrimary
                     )
                 }
             }
@@ -277,19 +323,97 @@ fun SettingsScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // About Section
+            // About / Developer Section
             SettingsSection(title = "About") {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(80.dp)
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.primaryContainer),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = ImageVector.vectorResource(R.drawable.user),
+                            contentDescription = null,
+                            modifier = Modifier.size(48.dp),
+                            tint = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text(
+                        text = "Shiinoji",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = "Developer",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(24.dp))
+                Text(
+                    text = "Collaborators",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.padding(bottom = 12.dp)
+                )
+                
+                // Placeholder for future collaborators
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(40.dp)
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.surfaceVariant),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = ImageVector.vectorResource(R.drawable.user),
+                            contentDescription = null,
+                            modifier = Modifier.size(24.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Column {
+                        Text(
+                            text = "Future Collaborator",
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Medium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                        )
+                        Text(
+                            text = "Contribute on GitHub",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(24.dp))
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                Spacer(modifier = Modifier.height(16.dp))
+
                 Text(
                     text = "AniHub v${BuildConfig.VERSION_NAME}",
                     style = MaterialTheme.typography.bodyLarge,
                     fontWeight = FontWeight.SemiBold
                 )
-                Spacer(modifier = Modifier.height(4.dp))
                 Text(
                     text = "A modern anime tracker and discovery app built with Jetpack Compose.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+
                 Spacer(modifier = Modifier.height(16.dp))
                 Button(
                     onClick = { viewModel.checkForUpdates() },
@@ -427,7 +551,14 @@ fun SettingsSwitch(
         }
         Switch(
             checked = checked,
-            onCheckedChange = onCheckedChange
+            onCheckedChange = onCheckedChange,
+            thumbContent = {
+                Icon(
+                    imageVector = if (checked) Icons.Default.Check else Icons.Default.Close,
+                    contentDescription = null,
+                    modifier = Modifier.size(SwitchDefaults.IconSize)
+                )
+            }
         )
     }
 }
@@ -459,24 +590,18 @@ fun ThemeOption(
 ) {
     Box(
         modifier = Modifier
-            .size(48.dp)
+            .size(52.dp)
+            .then(
+                if (selected) Modifier.border(2.dp, MaterialTheme.colorScheme.primary, CircleShape)
+                else Modifier
+            )
+            .padding(4.dp)
             .clip(CircleShape)
             .background(color ?: MaterialTheme.colorScheme.surfaceVariant)
-            .clickable { onClick() }
-            .then(
-                if (selected) Modifier.border(2.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.5f), CircleShape)
-                else Modifier
-            ),
+            .clickable { onClick() },
         contentAlignment = Alignment.Center
     ) {
         if (icon != null) icon()
-        if (selected && color != null) {
-            Icon(
-                Icons.Default.Check,
-                contentDescription = null,
-                tint = if (color == Color.White) Color.Black.copy(alpha = 0.2f) else Color.White.copy(alpha = 0.2f)
-            )
-        }
     }
 }
 
@@ -490,14 +615,15 @@ fun PaletteOption(
 ) {
     Box(
         modifier = Modifier
-            .size(48.dp)
+            .size(52.dp)
+            .then(
+                if (selected) Modifier.border(2.dp, MaterialTheme.colorScheme.primary, CircleShape)
+                else Modifier
+            )
+            .padding(4.dp)
             .clip(CircleShape)
             .background(MaterialTheme.colorScheme.surfaceVariant)
-            .clickable { onClick() }
-            .then(
-                if (selected) Modifier.border(2.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.5f), CircleShape)
-                else Modifier
-            ),
+            .clickable { onClick() },
         contentAlignment = Alignment.Center
     ) {
         if (icon != null) icon()

@@ -1,10 +1,13 @@
 package com.watchlist.anihub.ui.screens
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
+import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -54,7 +57,22 @@ fun WatchlistScreen(
                 selectedTabIndex = selectedTab,
                 containerColor = MaterialTheme.colorScheme.surface,
                 contentColor = MaterialTheme.colorScheme.primary,
-                divider = {}
+                divider = {},
+                indicator = { tabPositions ->
+                    if (selectedTab < tabPositions.size) {
+                        Box(
+                            Modifier
+                                .tabIndicatorOffset(tabPositions[selectedTab])
+                                .fillMaxWidth()
+                                .padding(horizontal = 64.dp) // Makes the indicator line much smaller
+                                .height(3.dp)
+                                .background(
+                                    color = MaterialTheme.colorScheme.primary,
+                                    shape = RoundedCornerShape(topStart = 3.dp, topEnd = 3.dp)
+                                )
+                        )
+                    }
+                }
             ) {
                 tabs.forEachIndexed { index, title ->
                     Tab(
@@ -66,7 +84,8 @@ fun WatchlistScreen(
                                 style = if (selectedTab == index) 
                                     MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
                                 else 
-                                    MaterialTheme.typography.titleMedium
+                                    MaterialTheme.typography.titleMedium,
+                                modifier = Modifier.padding(bottom = 8.dp)
                             ) 
                         }
                     )

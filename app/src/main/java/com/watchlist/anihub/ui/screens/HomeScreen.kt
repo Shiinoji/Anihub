@@ -5,9 +5,11 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.vectorResource
@@ -16,6 +18,8 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.watchlist.anihub.R
 import com.watchlist.anihub.data.remote.Media
+import com.watchlist.anihub.ui.UiState
+import com.watchlist.anihub.ui.components.ErrorView
 import com.watchlist.anihub.ui.components.SimpleAnimeCard
 import com.watchlist.anihub.ui.components.SimpleAnimeCardSkeleton
 import com.watchlist.anihub.ui.theme.LocalTitleLanguage
@@ -29,11 +33,12 @@ fun HomeScreen(
     onSettingsClick: () -> Unit,
     viewModel: HomeViewModel = hiltViewModel()
 ) {
-    val trending by viewModel.trendingAnime.collectAsState()
-    val popular by viewModel.popularAnime.collectAsState()
-    val seasonal by viewModel.seasonalAnime.collectAsState()
-    val topRated by viewModel.topRatedAnime.collectAsState()
-    val allTimePopular by viewModel.allTimePopular.collectAsState()
+    val trendingState by viewModel.trendingAnime.collectAsState()
+    val popularState by viewModel.popularAnime.collectAsState()
+    val seasonalState by viewModel.seasonalAnime.collectAsState()
+    val topRatedState by viewModel.topRatedAnime.collectAsState()
+    val allTimePopularState by viewModel.allTimePopular.collectAsState()
+    val isRefreshing by viewModel.isRefreshing.collectAsState()
 
     Scaffold(
         topBar = {
@@ -59,17 +64,23 @@ fun HomeScreen(
             )
         }
     ) { padding ->
-        LazyColumn(
+        PullToRefreshBox(
+            isRefreshing = isRefreshing,
+            onRefresh = { viewModel.refresh() },
             modifier = Modifier
                 .fillMaxSize()
-                .padding(padding),
-            contentPadding = PaddingValues(bottom = 16.dp)
+                .padding(padding)
         ) {
-            item { AnimeSection("Trending Now", trending, onAnimeClick) }
-            item { AnimeSection("Recommended for You", topRated, onAnimeClick) }
-            item { AnimeSection("Most Popular", popular, onAnimeClick) }
-            item { AnimeSection("Seasonal Anime", seasonal, onAnimeClick) }
-            item { AnimeSection("Explore More", allTimePopular, onAnimeClick) }
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(bottom = 16.dp)
+            ) {
+                item { AnimeSection("Trending Now", trendingState, onAnimeClick, onRetry = { viewModel.refresh() }) }
+                item { AnimeSection("Recommended for You", topRatedState, onAnimeClick, onRetry = { viewModel.refresh() }) }
+                item { AnimeSection("Most Popular", popularState, onAnimeClick, onRetry = { viewModel.refresh() }) }
+                item { AnimeSection("Seasonal Anime", seasonalState, onAnimeClick, onRetry = { viewModel.refresh() }) }
+                item { AnimeSection("Explore More", allTimePopularState, onAnimeClick, onRetry = { viewModel.refresh() }) }
+            }
         }
     }
 }
@@ -77,8 +88,9 @@ fun HomeScreen(
 @Composable
 fun AnimeSection(
     title: String,
-    animeList: List<Media>,
-    onAnimeClick: (Int) -> Unit
+    state: UiState<List<Media>>,
+    onAnimeClick: (Int) -> Unit,
+    onRetry: () -> Unit
 ) {
     val titleLanguage = LocalTitleLanguage.current
     Column(modifier = Modifier.padding(vertical = 8.dp)) {
@@ -88,22 +100,44 @@ fun AnimeSection(
             fontWeight = FontWeight.Bold,
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
         )
-        LazyRow(
-            contentPadding = PaddingValues(horizontal = 16.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            if (animeList.isEmpty()) {
-                items(5) {
-                    SimpleAnimeCardSkeleton()
+        
+        when (state) {
+            is UiState.Loading -> {
+                LazyRow(
+                    contentPadding = PaddingValues(horizontal = 16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    items(5) { SimpleAnimeCardSkeleton() }
                 }
-            } else {
-                items(animeList) { anime ->
-                    SimpleAnimeCard(
-                        title = anime.title.getDisplayTitle(titleLanguage),
-                        imageUrl = anime.coverImage.extraLarge ?: anime.coverImage.large ?: "",
-                        onClick = { onAnimeClick(anime.id) },
-                        modifier = Modifier.width(140.dp)
-                    )
+            }
+            is UiState.Success -> {
+                LazyRow(
+                    contentPadding = PaddingValues(horizontal = 16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    items(state.data) { anime ->
+                        SimpleAnimeCard(
+                            title = anime.title.getDisplayTitle(titleLanguage),
+                            imageUrl = anime.coverImage.extraLarge ?: anime.coverImage.large ?: "",
+                            onClick = { onAnimeClick(anime.id) },
+                            modifier = Modifier.width(140.dp)
+                        )
+                    }
+                }
+            }
+            is UiState.Error -> {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(200.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(state.message, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.error)
+                        TextButton(onClick = onRetry) {
+                            Text("Retry")
+                        }
+                    }
                 }
             }
         }

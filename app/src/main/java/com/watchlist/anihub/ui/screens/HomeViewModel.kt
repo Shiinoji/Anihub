@@ -4,70 +4,102 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.watchlist.anihub.data.ThemeManager
 import com.watchlist.anihub.data.remote.*
+import com.watchlist.anihub.ui.UiState
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.*
+import java.io.IOException
+import java.net.UnknownHostException
 import javax.inject.Inject
 
 @OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class HomeViewModel @Inject constructor(
     private val aniListService: AniListService,
-    private val themeManager: ThemeManager
+    private val themeManager: ThemeManager,
 ) : ViewModel() {
 
-    val trendingAnime: StateFlow<List<Media>> = themeManager.adultContent.flatMapLatest { isAdult ->
+    private val _isRefreshing = MutableStateFlow(false)
+    val isRefreshing = _isRefreshing.asStateFlow()
+
+    private val _refreshTrigger = MutableStateFlow(0)
+
+    private val adultContentFlow = themeManager.adultContent
+    private val combinedTrigger = combine(adultContentFlow, _refreshTrigger) { isAdult, trigger ->
+        isAdult to trigger
+    }
+
+    val trendingAnime: StateFlow<UiState<List<Media>>> = combinedTrigger.flatMapLatest { (isAdult, _) ->
         flow {
+            emit(UiState.Loading)
             try {
                 val res = aniListService.getAnimeList(GraphQLRequest(AniListQueries.TRENDING_NOW, mapOf("page" to 1, "perPage" to 10, "isAdult" to isAdult)))
-                emit(res.data.Page.media)
+                emit(UiState.Success(res.data.Page.media))
             } catch (e: Exception) {
-                emit(emptyList())
+                emit(UiState.Error(getErrorMessage(e)))
+            } finally {
+                _isRefreshing.value = false
             }
         }
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), UiState.Loading)
 
-    val popularAnime: StateFlow<List<Media>> = themeManager.adultContent.flatMapLatest { isAdult ->
+    val popularAnime: StateFlow<UiState<List<Media>>> = combinedTrigger.flatMapLatest { (isAdult, _) ->
         flow {
+            emit(UiState.Loading)
             try {
                 val res = aniListService.getAnimeList(GraphQLRequest(AniListQueries.MOST_POPULAR, mapOf("page" to 1, "perPage" to 10, "isAdult" to isAdult)))
-                emit(res.data.Page.media)
+                emit(UiState.Success(res.data.Page.media))
             } catch (e: Exception) {
-                emit(emptyList())
+                emit(UiState.Error(getErrorMessage(e)))
             }
         }
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), UiState.Loading)
 
-    val seasonalAnime: StateFlow<List<Media>> = themeManager.adultContent.flatMapLatest { isAdult ->
+    val seasonalAnime: StateFlow<UiState<List<Media>>> = combinedTrigger.flatMapLatest { (isAdult, _) ->
         flow {
+            emit(UiState.Loading)
             try {
                 val res = aniListService.getAnimeList(GraphQLRequest(AniListQueries.SEASONAL_ANIME, mapOf("page" to 1, "perPage" to 10, "season" to "SPRING", "seasonYear" to 2024, "isAdult" to isAdult)))
-                emit(res.data.Page.media)
+                emit(UiState.Success(res.data.Page.media))
             } catch (e: Exception) {
-                emit(emptyList())
+                emit(UiState.Error(getErrorMessage(e)))
             }
         }
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), UiState.Loading)
 
-    val topRatedAnime: StateFlow<List<Media>> = themeManager.adultContent.flatMapLatest { isAdult ->
+    val topRatedAnime: StateFlow<UiState<List<Media>>> = combinedTrigger.flatMapLatest { (isAdult, _) ->
         flow {
+            emit(UiState.Loading)
             try {
                 val res = aniListService.getAnimeList(GraphQLRequest(AniListQueries.TOP_RATED, mapOf("page" to 1, "perPage" to 10, "isAdult" to isAdult)))
-                emit(res.data.Page.media)
+                emit(UiState.Success(res.data.Page.media))
             } catch (e: Exception) {
-                emit(emptyList())
+                emit(UiState.Error(getErrorMessage(e)))
             }
         }
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), UiState.Loading)
 
-    val allTimePopular: StateFlow<List<Media>> = themeManager.adultContent.flatMapLatest { isAdult ->
+    val allTimePopular: StateFlow<UiState<List<Media>>> = combinedTrigger.flatMapLatest { (isAdult, _) ->
         flow {
+            emit(UiState.Loading)
             try {
                 val res = aniListService.getAnimeList(GraphQLRequest(AniListQueries.ALL_TIME_POPULAR, mapOf("page" to 1, "perPage" to 10, "isAdult" to isAdult)))
-                emit(res.data.Page.media)
+                emit(UiState.Success(res.data.Page.media))
             } catch (e: Exception) {
-                emit(emptyList())
+                emit(UiState.Error(getErrorMessage(e)))
             }
         }
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), UiState.Loading)
+
+    fun refresh() {
+        _isRefreshing.value = true
+        _refreshTrigger.value += 1
+    }
+
+    private fun getErrorMessage(e: Exception): String {
+        return when (e) {
+            is UnknownHostException, is IOException -> "No internet connection. Please check your network."
+            else -> "Something went wrong. Please try again later."
+        }
+    }
 }

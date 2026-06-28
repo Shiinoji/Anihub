@@ -5,7 +5,7 @@ enum class ThemeMode {
 }
 
 enum class ColorPalette {
-    DYNAMIC, BROWN, DEEP_BROWN, PURPLE, DEEP_PURPLE
+    DYNAMIC, BROWN, DEEP_BROWN, PURPLE, DEEP_PURPLE, OCEAN, FOREST, CHERRY, SUNSET, LAVENDER, MINT, GOLD
 }
 
 enum class TitleLanguage {

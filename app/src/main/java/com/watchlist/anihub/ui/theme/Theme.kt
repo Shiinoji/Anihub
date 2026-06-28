@@ -8,6 +8,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.compositionLocalOf
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
@@ -23,6 +24,13 @@ private fun getLightColorScheme(palette: ColorPalette) = when (palette) {
     ColorPalette.DEEP_BROWN -> lightColorScheme(primary = DeepBrownPrimary, secondary = DeepBrownSecondary, tertiary = DeepBrownTertiary)
     ColorPalette.PURPLE -> lightColorScheme(primary = PurplePrimary, secondary = PurpleSecondary, tertiary = PurpleTertiary)
     ColorPalette.DEEP_PURPLE -> lightColorScheme(primary = DeepPurplePrimary, secondary = DeepPurpleSecondary, tertiary = DeepPurpleTertiary)
+    ColorPalette.OCEAN -> lightColorScheme(primary = OceanPrimary, secondary = OceanSecondary, tertiary = OceanTertiary)
+    ColorPalette.FOREST -> lightColorScheme(primary = ForestPrimary, secondary = ForestSecondary, tertiary = ForestTertiary)
+    ColorPalette.CHERRY -> lightColorScheme(primary = CherryPrimary, secondary = CherrySecondary, tertiary = CherryTertiary)
+    ColorPalette.SUNSET -> lightColorScheme(primary = SunsetPrimary, secondary = SunsetSecondary, tertiary = SunsetTertiary)
+    ColorPalette.LAVENDER -> lightColorScheme(primary = LavenderPrimary, secondary = LavenderSecondary, tertiary = LavenderTertiary)
+    ColorPalette.MINT -> lightColorScheme(primary = MintPrimary, secondary = MintSecondary, tertiary = MintTertiary)
+    ColorPalette.GOLD -> lightColorScheme(primary = GoldPrimary, secondary = GoldSecondary, tertiary = GoldTertiary)
 }
 
 private fun getDarkColorScheme(palette: ColorPalette, isAmoled: Boolean) = when (palette) {
@@ -31,6 +39,13 @@ private fun getDarkColorScheme(palette: ColorPalette, isAmoled: Boolean) = when 
     ColorPalette.DEEP_BROWN -> darkColorScheme(primary = DeepBrownPrimary, secondary = DeepBrownSecondary, tertiary = DeepBrownTertiary, background = if (isAmoled) DeepBlack else DarkGrey, surface = if (isAmoled) DeepBlack else DarkGrey)
     ColorPalette.PURPLE -> darkColorScheme(primary = PurplePrimary, secondary = PurpleSecondary, tertiary = PurpleTertiary, background = if (isAmoled) DeepBlack else DarkGrey, surface = if (isAmoled) DeepBlack else DarkGrey)
     ColorPalette.DEEP_PURPLE -> darkColorScheme(primary = DeepPurplePrimary, secondary = DeepPurpleSecondary, tertiary = DeepPurpleTertiary, background = if (isAmoled) DeepBlack else DarkGrey, surface = if (isAmoled) DeepBlack else DarkGrey)
+    ColorPalette.OCEAN -> darkColorScheme(primary = OceanPrimary, secondary = OceanSecondary, tertiary = OceanTertiary, background = if (isAmoled) DeepBlack else DarkGrey, surface = if (isAmoled) DeepBlack else DarkGrey)
+    ColorPalette.FOREST -> darkColorScheme(primary = ForestPrimary, secondary = ForestSecondary, tertiary = ForestTertiary, background = if (isAmoled) DeepBlack else DarkGrey, surface = if (isAmoled) DeepBlack else DarkGrey)
+    ColorPalette.CHERRY -> darkColorScheme(primary = CherryPrimary, secondary = CherrySecondary, tertiary = CherryTertiary, background = if (isAmoled) DeepBlack else DarkGrey, surface = if (isAmoled) DeepBlack else DarkGrey)
+    ColorPalette.SUNSET -> darkColorScheme(primary = SunsetPrimary, secondary = SunsetSecondary, tertiary = SunsetTertiary, background = if (isAmoled) DeepBlack else DarkGrey, surface = if (isAmoled) DeepBlack else DarkGrey)
+    ColorPalette.LAVENDER -> darkColorScheme(primary = LavenderPrimary, secondary = LavenderSecondary, tertiary = LavenderTertiary, background = if (isAmoled) DeepBlack else DarkGrey, surface = if (isAmoled) DeepBlack else DarkGrey)
+    ColorPalette.MINT -> darkColorScheme(primary = MintPrimary, secondary = MintSecondary, tertiary = MintTertiary, background = if (isAmoled) DeepBlack else DarkGrey, surface = if (isAmoled) DeepBlack else DarkGrey)
+    ColorPalette.GOLD -> darkColorScheme(primary = GoldPrimary, secondary = GoldSecondary, tertiary = GoldTertiary, background = if (isAmoled) DeepBlack else DarkGrey, surface = if (isAmoled) DeepBlack else DarkGrey)
 }
 
 @Composable
@@ -50,12 +65,24 @@ fun AnihubTheme(
     }
 
     val context = LocalContext.current
-    val colorScheme = when {
+    var colorScheme = when {
         colorPalette == ColorPalette.DYNAMIC && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
             if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
         }
         darkTheme -> getDarkColorScheme(colorPalette, themeMode == ThemeMode.AMOLED)
         else -> getLightColorScheme(colorPalette)
+    }
+
+    // Force AMOLED black background if selected
+    if (themeMode == ThemeMode.AMOLED) {
+        colorScheme = colorScheme.copy(
+            background = DeepBlack,
+            surface = DeepBlack,
+            surfaceVariant = Color(0xFF121212),
+            onBackground = Color.White,
+            onSurface = Color.White,
+            surfaceContainer = Color(0xFF0A0A0A)
+        )
     }
 
     val view = LocalView.current
