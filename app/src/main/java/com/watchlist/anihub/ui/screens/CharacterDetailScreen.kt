@@ -7,7 +7,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
@@ -27,6 +26,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import com.watchlist.anihub.R
+import com.watchlist.anihub.data.remote.Character
 import com.watchlist.anihub.ui.UiState
 import com.watchlist.anihub.ui.components.ErrorView
 import com.watchlist.anihub.ui.components.HeaderIconButton
@@ -64,7 +64,7 @@ fun CharacterDetailScreen(
                         CircularProgressIndicator()
                     }
                 }
-                is UiState.Success -> {
+                is UiState.Success<Character> -> {
                     val char = state.data
                     Box(
                         modifier = Modifier.fillMaxSize()
@@ -177,7 +177,8 @@ fun CharacterDetailScreen(
                             }
 
                             // Appearances (Anime)
-                            char.media?.nodes?.let { animeList ->
+                            val animeList = char.media?.nodes
+                            if (!animeList.isNullOrEmpty()) {
                                 item {
                                     Text(
                                         text = "Appearances",
@@ -190,13 +191,15 @@ fun CharacterDetailScreen(
                                         contentPadding = PaddingValues(horizontal = 16.dp),
                                         horizontalArrangement = Arrangement.spacedBy(12.dp)
                                     ) {
-                                        items(animeList) { anime ->
-                                            SimpleAnimeCard(
-                                                title = anime.title.getDisplayTitle(titleLanguage),
-                                                imageUrl = anime.coverImage.extraLarge ?: anime.coverImage.large ?: "",
-                                                onClick = { onAnimeClick(anime.id) },
-                                                modifier = Modifier.width(120.dp)
-                                            )
+                                        for (anime in animeList) {
+                                            item {
+                                                SimpleAnimeCard(
+                                                    title = anime.title.getDisplayTitle(titleLanguage),
+                                                    imageUrl = anime.coverImage.extraLarge ?: anime.coverImage.large ?: "",
+                                                    onClick = { onAnimeClick(anime.id) },
+                                                    modifier = Modifier.width(120.dp)
+                                                )
+                                            }
                                         }
                                     }
                                 }

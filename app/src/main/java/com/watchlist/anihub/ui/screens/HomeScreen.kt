@@ -19,7 +19,6 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.watchlist.anihub.R
 import com.watchlist.anihub.data.remote.Media
 import com.watchlist.anihub.ui.UiState
-import com.watchlist.anihub.ui.components.ErrorView
 import com.watchlist.anihub.ui.components.SimpleAnimeCard
 import com.watchlist.anihub.ui.components.SimpleAnimeCardSkeleton
 import com.watchlist.anihub.ui.theme.LocalTitleLanguage

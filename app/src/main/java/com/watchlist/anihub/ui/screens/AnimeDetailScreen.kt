@@ -16,11 +16,11 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -35,7 +35,7 @@ import com.watchlist.anihub.ui.theme.LocalScoreFormat
 import com.watchlist.anihub.ui.theme.LocalShowAiringCountdown
 import com.watchlist.anihub.ui.theme.LocalTitleLanguage
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun AnimeDetailScreen(
     animeId: Int,
@@ -67,8 +67,8 @@ fun AnimeDetailScreen(
                 is UiState.Loading -> {
                     AnimeDetailSkeleton()
                 }
-                is UiState.Success -> {
-                    val media = state.data
+                is UiState.Success<*> -> {
+                    val media = state.data as Media
                     Box(
                         modifier = Modifier.fillMaxSize()
                     ) {
@@ -111,7 +111,7 @@ fun AnimeDetailScreen(
                                             .fillMaxSize()
                                             .statusBarsPadding()
                                     ) {
-                                        Spacer(modifier = Modifier.height(80.dp)) // Space for overlaid buttons at the top
+                                        Spacer(modifier = Modifier.height(80.dp))
 
                                         // Metadata Header
                                         Row(
@@ -195,14 +195,15 @@ fun AnimeDetailScreen(
                                     )
 
                                     // Genres
-                                    media.genres?.let { genres ->
+                                    val genresList = media.genres
+                                    if (!genresList.isNullOrEmpty()) {
                                         Spacer(modifier = Modifier.height(12.dp))
                                         FlowRow(
                                             modifier = Modifier.fillMaxWidth(),
                                             horizontalArrangement = Arrangement.spacedBy(8.dp),
                                             verticalArrangement = Arrangement.spacedBy(8.dp)
                                         ) {
-                                            genres.forEach { genre ->
+                                            for (genre in genresList) {
                                                 SuggestionChip(
                                                     onClick = { /* TODO: Filter by genre */ },
                                                     label = { Text(genre, style = MaterialTheme.typography.labelSmall) },
@@ -220,7 +221,8 @@ fun AnimeDetailScreen(
                             }
 
                             // Characters
-                            media.characters?.nodes?.let { characters ->
+                            val charactersNodes = media.characters?.nodes
+                            if (!charactersNodes.isNullOrEmpty()) {
                                 item {
                                     Text(
                                         text = "Characters",
@@ -232,28 +234,30 @@ fun AnimeDetailScreen(
                                         contentPadding = PaddingValues(horizontal = 16.dp),
                                         horizontalArrangement = Arrangement.spacedBy(16.dp)
                                     ) {
-                                        items(characters) { character ->
-                                            Column(
-                                                horizontalAlignment = Alignment.CenterHorizontally,
-                                                modifier = Modifier
-                                                    .width(80.dp)
-                                                    .clickable { onCharacterClick(character.id) }
-                                            ) {
-                                                AsyncImage(
-                                                    model = character.image.large,
-                                                    contentDescription = null,
+                                        for (character in charactersNodes) {
+                                            item {
+                                                Column(
+                                                    horizontalAlignment = Alignment.CenterHorizontally,
                                                     modifier = Modifier
-                                                        .size(70.dp)
-                                                        .clip(CircleShape),
-                                                    contentScale = ContentScale.Crop
-                                                )
-                                                Text(
-                                                    text = character.name.full ?: "",
-                                                    style = MaterialTheme.typography.labelSmall,
-                                                    maxLines = 1,
-                                                    overflow = TextOverflow.Ellipsis,
-                                                    modifier = Modifier.padding(top = 4.dp)
-                                                )
+                                                        .width(80.dp)
+                                                        .clickable { onCharacterClick(character.id) }
+                                                ) {
+                                                    AsyncImage(
+                                                        model = character.image.large,
+                                                        contentDescription = null,
+                                                        modifier = Modifier
+                                                            .size(70.dp)
+                                                            .clip(CircleShape),
+                                                        contentScale = ContentScale.Crop
+                                                    )
+                                                    Text(
+                                                        text = character.name.full ?: "",
+                                                        style = MaterialTheme.typography.labelSmall,
+                                                        maxLines = 1,
+                                                        overflow = TextOverflow.Ellipsis,
+                                                        modifier = Modifier.padding(top = 4.dp)
+                                                    )
+                                                }
                                             }
                                         }
                                     }
@@ -261,7 +265,8 @@ fun AnimeDetailScreen(
                             }
 
                             // Recommendations
-                            media.recommendations?.nodes?.let { recommendations ->
+                            val recommendationsNodes = media.recommendations?.nodes
+                            if (!recommendationsNodes.isNullOrEmpty()) {
                                 item {
                                     Text(
                                         text = "Recommendation",
@@ -273,12 +278,15 @@ fun AnimeDetailScreen(
                                         contentPadding = PaddingValues(horizontal = 16.dp),
                                         horizontalArrangement = Arrangement.spacedBy(12.dp)
                                     ) {
-                                        items(recommendations) { rec ->
-                                            rec.mediaRecommendation?.let { recommendedMedia ->
-                                                AnimeCard(
-                                                    media = recommendedMedia,
-                                                    onClick = { onAnimeClick(recommendedMedia.id) }
-                                                )
+                                        for (rec in recommendationsNodes) {
+                                            val recommendedMedia = rec.mediaRecommendation
+                                            if (recommendedMedia != null) {
+                                                item {
+                                                    AnimeCard(
+                                                        media = recommendedMedia,
+                                                        onClick = { onAnimeClick(recommendedMedia.id) }
+                                                    )
+                                                }
                                             }
                                         }
                                     }
@@ -301,7 +309,7 @@ fun AnimeDetailScreen(
                             )
                             Row {
                                 HeaderIconButton(
-                                    icon = if (isInWatchlist) ImageVector.vectorResource(R.drawable.bookmark) else ImageVector.vectorResource(R.drawable.bookmark),
+                                    icon = ImageVector.vectorResource(R.drawable.bookmark),
                                     onClick = { viewModel.toggleWatchlist() },
                                     tint = if (isInWatchlist) MaterialTheme.colorScheme.primary else Color.White
                                 )
