@@ -1,11 +1,16 @@
 package com.watchlist.anihub.ui.screens
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.*
 import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.runtime.*
@@ -17,6 +22,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.watchlist.anihub.R
+import com.watchlist.anihub.data.local.AnimeEntity
+import com.watchlist.anihub.data.local.WatchlistStatus
 import com.watchlist.anihub.ui.components.SimpleAnimeCard
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -31,8 +38,114 @@ fun WatchlistScreen(
     
     val watchlist by viewModel.watchlist.collectAsState()
     val favorites by viewModel.favorites.collectAsState()
+    val filterStatus by viewModel.filterStatus.collectAsState()
+    val sortOrder by viewModel.sortOrder.collectAsState()
+    val itemsPerRow by viewModel.itemsPerRow.collectAsState()
     
     val currentList = if (selectedTab == 0) watchlist else favorites
+
+    var animeToDelete by remember { mutableStateOf<AnimeEntity?>(null) }
+    var showFilterSheet by remember { mutableStateOf(false) }
+
+    if (animeToDelete != null) {
+        AlertDialog(
+            onDismissRequest = { animeToDelete = null },
+            title = { Text("Remove from Watchlist?") },
+            text = { Text("Are you sure you want to remove \"${animeToDelete?.title}\" from your watchlist?") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        animeToDelete?.let { viewModel.removeFromWatchlist(it) }
+                        animeToDelete = null
+                    }
+                ) {
+                    Text("Remove", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { animeToDelete = null }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
+    if (showFilterSheet) {
+        ModalBottomSheet(
+            onDismissRequest = { showFilterSheet = false },
+            containerColor = MaterialTheme.colorScheme.surfaceContainer
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp)
+                    .padding(bottom = 32.dp)
+            ) {
+                Text(
+                    "Personalize View",
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold
+                )
+                Spacer(modifier = Modifier.height(24.dp))
+
+                // Filter Section (Only for Watchlist tab)
+                if (selectedTab == 0) {
+                    Text("Filter by Status", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        WatchlistStatus.entries.forEach { status ->
+                            FilterChip(
+                                selected = filterStatus == status,
+                                onClick = { 
+                                    viewModel.setFilterStatus(if (filterStatus == status) null else status)
+                                },
+                                label = { Text(status.getDisplayName()) },
+                                leadingIcon = if (filterStatus == status) {
+                                    { Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(16.dp)) }
+                                } else null
+                            )
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(24.dp))
+                }
+
+                // Sort Section
+                Text("Sort Order", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Spacer(modifier = Modifier.height(8.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    WatchlistSort.entries.forEach { sort ->
+                        FilterChip(
+                            selected = sortOrder == sort,
+                            onClick = { viewModel.setSortOrder(sort) },
+                            label = { 
+                                Text(when(sort) {
+                                    WatchlistSort.ALPHABETICAL -> "A-Z"
+                                    WatchlistSort.LAST_ADDED -> "Last Added"
+                                    WatchlistSort.DATE_ADDED -> "Date Added"
+                                })
+                            }
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.height(24.dp))
+
+                // Display Section
+                Text("Items per Row: $itemsPerRow", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Slider(
+                    value = itemsPerRow.toFloat(),
+                    onValueChange = { viewModel.setItemsPerRow(it.toInt()) },
+                    valueRange = 1f..5f,
+                    steps = 3
+                )
+            }
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -47,6 +160,11 @@ fun WatchlistScreen(
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
                         Icon(ImageVector.vectorResource(R.drawable.arrow_left), contentDescription = "Back")
+                    }
+                },
+                actions = {
+                    IconButton(onClick = { showFilterSheet = true }) {
+                        Icon(Icons.Default.Tune, contentDescription = "Filter and Sort")
                     }
                 }
             )
@@ -117,19 +235,21 @@ fun WatchlistScreen(
                 }
             } else {
                 LazyVerticalGrid(
-                    columns = GridCells.Adaptive(140.dp),
+                    columns = GridCells.Fixed(itemsPerRow),
                     modifier = Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(16.dp),
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     items(currentList) { anime ->
-                    SimpleAnimeCard(
-                        title = anime.title,
-                        imageUrl = anime.imageUrl,
-                        onClick = { onAnimeClick(anime.id) }
-                    )
-                }
+                        SimpleAnimeCard(
+                            title = anime.title,
+                            imageUrl = anime.imageUrl,
+                            onClick = { onAnimeClick(anime.id) },
+                            onLongClick = { animeToDelete = anime },
+                            status = if (selectedTab == 0) anime.status.getDisplayName() else null
+                        )
+                    }
                 }
             }
         }

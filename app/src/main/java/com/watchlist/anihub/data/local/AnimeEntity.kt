@@ -9,5 +9,8 @@ data class AnimeEntity(
     val title: String,
     val imageUrl: String,
     val isFavorite: Boolean = false,
-    val lastNotifiedEpisode: Int = 0
+    val lastNotifiedEpisode: Int = 0,
+    val status: WatchlistStatus = WatchlistStatus.PLAN_TO_WATCH,
+    val detailJson: String? = null,
+    val addedAt: Long = System.currentTimeMillis()
 )

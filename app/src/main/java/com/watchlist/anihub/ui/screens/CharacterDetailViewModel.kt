@@ -30,7 +30,7 @@ class CharacterDetailViewModel @Inject constructor(
                 val response = aniListService.getCharacterDetail(
                     GraphQLRequest(AniListQueries.CHARACTER_DETAIL, mapOf("id" to id))
                 )
-                _characterDetail.value = UiState.Success(response.data.Character)
+                _characterDetail.value = UiState.Success(response.data.character)
             } catch (e: Exception) {
                 _characterDetail.value = UiState.Error(getErrorMessage(e))
             } finally {

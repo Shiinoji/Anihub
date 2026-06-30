@@ -15,8 +15,8 @@ import javax.inject.Inject
 @OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class HomeViewModel @Inject constructor(
-    private val aniListService: AniListService,
-    private val themeManager: ThemeManager,
+    aniListService: AniListService,
+    themeManager: ThemeManager,
 ) : ViewModel() {
 
     private val _isRefreshing = MutableStateFlow(false)
@@ -30,66 +30,66 @@ class HomeViewModel @Inject constructor(
     }
 
     val trendingAnime: StateFlow<UiState<List<Media>>> = combinedTrigger.flatMapLatest { (isAdult, _) ->
-        flow {
+        flow<UiState<List<Media>>> {
             emit(UiState.Loading)
             try {
                 val res = aniListService.getAnimeList(GraphQLRequest(AniListQueries.TRENDING_NOW, mapOf("page" to 1, "perPage" to 10, "isAdult" to isAdult)))
-                emit(UiState.Success(res.data.Page.media))
+                emit(UiState.Success(res.data.page.media ?: emptyList()))
             } catch (e: Exception) {
                 emit(UiState.Error(getErrorMessage(e)))
             } finally {
                 _isRefreshing.value = false
             }
         }
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), UiState.Loading)
+    }.stateIn(viewModelScope, SharingStarted.Lazily, UiState.Loading)
 
     val popularAnime: StateFlow<UiState<List<Media>>> = combinedTrigger.flatMapLatest { (isAdult, _) ->
-        flow {
+        flow<UiState<List<Media>>> {
             emit(UiState.Loading)
             try {
                 val res = aniListService.getAnimeList(GraphQLRequest(AniListQueries.MOST_POPULAR, mapOf("page" to 1, "perPage" to 10, "isAdult" to isAdult)))
-                emit(UiState.Success(res.data.Page.media))
+                emit(UiState.Success(res.data.page.media ?: emptyList()))
             } catch (e: Exception) {
                 emit(UiState.Error(getErrorMessage(e)))
             }
         }
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), UiState.Loading)
+    }.stateIn(viewModelScope, SharingStarted.Lazily, UiState.Loading)
 
     val seasonalAnime: StateFlow<UiState<List<Media>>> = combinedTrigger.flatMapLatest { (isAdult, _) ->
-        flow {
+        flow<UiState<List<Media>>> {
             emit(UiState.Loading)
             try {
                 val res = aniListService.getAnimeList(GraphQLRequest(AniListQueries.SEASONAL_ANIME, mapOf("page" to 1, "perPage" to 10, "season" to "SPRING", "seasonYear" to 2024, "isAdult" to isAdult)))
-                emit(UiState.Success(res.data.Page.media))
+                emit(UiState.Success(res.data.page.media ?: emptyList()))
             } catch (e: Exception) {
                 emit(UiState.Error(getErrorMessage(e)))
             }
         }
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), UiState.Loading)
+    }.stateIn(viewModelScope, SharingStarted.Lazily, UiState.Loading)
 
     val topRatedAnime: StateFlow<UiState<List<Media>>> = combinedTrigger.flatMapLatest { (isAdult, _) ->
-        flow {
+        flow<UiState<List<Media>>> {
             emit(UiState.Loading)
             try {
                 val res = aniListService.getAnimeList(GraphQLRequest(AniListQueries.TOP_RATED, mapOf("page" to 1, "perPage" to 10, "isAdult" to isAdult)))
-                emit(UiState.Success(res.data.Page.media))
+                emit(UiState.Success(res.data.page.media ?: emptyList()))
             } catch (e: Exception) {
                 emit(UiState.Error(getErrorMessage(e)))
             }
         }
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), UiState.Loading)
+    }.stateIn(viewModelScope, SharingStarted.Lazily, UiState.Loading)
 
     val allTimePopular: StateFlow<UiState<List<Media>>> = combinedTrigger.flatMapLatest { (isAdult, _) ->
-        flow {
+        flow<UiState<List<Media>>> {
             emit(UiState.Loading)
             try {
                 val res = aniListService.getAnimeList(GraphQLRequest(AniListQueries.ALL_TIME_POPULAR, mapOf("page" to 1, "perPage" to 10, "isAdult" to isAdult)))
-                emit(UiState.Success(res.data.Page.media))
+                emit(UiState.Success(res.data.page.media ?: emptyList()))
             } catch (e: Exception) {
                 emit(UiState.Error(getErrorMessage(e)))
             }
         }
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), UiState.Loading)
+    }.stateIn(viewModelScope, SharingStarted.Lazily, UiState.Loading)
 
     fun refresh() {
         _isRefreshing.value = true

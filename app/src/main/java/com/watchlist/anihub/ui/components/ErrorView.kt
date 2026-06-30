@@ -3,7 +3,8 @@ package com.watchlist.anihub.ui.components
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material.icons.filled.SignalWifiOff
+import androidx.compose.ui.res.vectorResource
+import com.watchlist.anihub.R
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -17,7 +18,7 @@ fun ErrorView(
     message: String,
     onRetry: () -> Unit,
     modifier: Modifier = Modifier,
-    icon: ImageVector = Icons.Default.SignalWifiOff
+    icon: ImageVector = ImageVector.vectorResource(R.drawable.wifi_off)
 ) {
     Box(
         modifier = modifier.fillMaxSize(),

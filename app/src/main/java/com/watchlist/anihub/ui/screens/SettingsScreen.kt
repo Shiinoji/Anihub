@@ -40,6 +40,7 @@ import com.watchlist.anihub.ui.theme.*
 @Composable
 fun SettingsScreen(
     onBackClick: () -> Unit,
+    onHistoryClick: () -> Unit,
     viewModel: ThemeViewModel
 ) {
     val themeMode by viewModel.themeMode.collectAsState()
@@ -273,6 +274,15 @@ fun SettingsScreen(
             // AniList Sync Settings
             SettingsSection(title = "Anime Discovery") {
                 SettingsClickableRow(
+                    label = "Watch History",
+                    description = "View your recently watched anime",
+                    icon = ImageVector.vectorResource(R.drawable.history),
+                    onClick = onHistoryClick
+                )
+
+                HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), color = MaterialTheme.colorScheme.outlineVariant)
+
+                SettingsClickableRow(
                     label = "Title Language",
                     value = titleLanguage.name.lowercase().replaceFirstChar { it.uppercase() },
                     onClick = { showTitleDialog = true }
@@ -372,11 +382,33 @@ fun SettingsScreen(
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        IconButton(onClick = { /* Open GitHub */ }, modifier = Modifier.size(32.dp)) {
+                            Icon(
+                                imageVector = ImageVector.vectorResource(R.drawable.github_142_svgrepo_com),
+                                contentDescription = "GitHub",
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(24.dp)
+                            )
+                        }
+                        IconButton(onClick = { /* Open Discord */ }, modifier = Modifier.size(32.dp)) {
+                            Icon(
+                                imageVector = ImageVector.vectorResource(R.drawable.discord_fill_svgrepo_com),
+                                contentDescription = "Discord",
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant, // Discord Blurple
+                                modifier = Modifier.size(24.dp)
+                            )
+                        }
+                    }
                 }
 
                 Spacer(modifier = Modifier.height(24.dp))
                 Text(
-                    text = "Collaborators",
+                    text = "Contributors",
                     style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.padding(bottom = 12.dp)
@@ -404,7 +436,7 @@ fun SettingsScreen(
                     Spacer(modifier = Modifier.width(12.dp))
                     Column {
                         Text(
-                            text = "Future Collaborator",
+                            text = "Contributor",
                             style = MaterialTheme.typography.bodyMedium,
                             fontWeight = FontWeight.Medium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
@@ -413,6 +445,38 @@ fun SettingsScreen(
                             text = "Contribute on GitHub",
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(24.dp))
+                Text(
+                    text = "API Credits",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.padding(bottom = 12.dp)
+                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = ImageVector.vectorResource(R.drawable.anilist_svgrepo_com),
+                        contentDescription = "AniList",
+                        tint = Color(0xFF02A9FF),
+                        modifier = Modifier.size(32.dp)
+                    )
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Column {
+                        Text(
+                            text = "AniList API",
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Medium
+                        )
+                        Text(
+                            text = "Providing high-quality anime data",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
@@ -427,7 +491,7 @@ fun SettingsScreen(
                     fontWeight = FontWeight.SemiBold
                 )
                 Text(
-                    text = "A modern anime tracker and discovery app built with Jetpack Compose.",
+                    text = "Anime Watchlist and Tracker App built with Anilist API.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -448,35 +512,58 @@ fun SettingsScreen(
 @Composable
 fun SettingsClickableRow(
     label: String,
-    value: String,
+    value: String? = null,
+    description: String? = null,
+    icon: ImageVector? = null,
     onClick: () -> Unit
 ) {
     Surface(
         modifier = Modifier
             .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
             .clickable { onClick() },
         color = Color.Transparent
     ) {
         Row(
             modifier = Modifier
-                .padding(vertical = 12.dp),
+                .padding(vertical = 8.dp, horizontal = 4.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = label,
-                    style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight.SemiBold
-                )
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                if (icon != null) {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(24.dp)
+                    )
+                    Spacer(modifier = Modifier.width(16.dp))
+                }
+                Column {
+                    Text(
+                        text = label,
+                        style = MaterialTheme.typography.bodyLarge,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    if (description != null) {
+                        Text(
+                            text = description,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
             }
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    text = value,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.primary
-                )
-                Spacer(modifier = Modifier.width(8.dp))
+                if (value != null) {
+                    Text(
+                        text = value,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                }
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                     contentDescription = null,

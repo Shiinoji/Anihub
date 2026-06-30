@@ -48,4 +48,14 @@ interface AnimeDao {
 
     @Query("DELETE FROM notifications")
     suspend fun clearNotifications()
+
+    // Airing Schedule
+    @Query("SELECT * FROM airing_schedule WHERE airingAt >= :start AND airingAt <= :end ORDER BY airingAt ASC")
+    fun getAiringSchedule(start: Long, end: Long): Flow<List<AiringScheduleEntity>>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertAiringSchedules(schedules: List<AiringScheduleEntity>)
+
+    @Query("DELETE FROM airing_schedule WHERE airingAt < :timestamp")
+    suspend fun deleteOldSchedules(timestamp: Long)
 }

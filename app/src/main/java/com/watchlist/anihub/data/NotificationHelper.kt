@@ -41,7 +41,7 @@ class NotificationHelper @Inject constructor(
             putExtra("animeId", animeId)
         }
         val pendingIntent: PendingIntent = PendingIntent.getActivity(
-            context, animeId, intent, PendingIntent.FLAG_IMMUTABLE
+            context, animeId, intent, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
 
         val builder = NotificationCompat.Builder(context, channelId)

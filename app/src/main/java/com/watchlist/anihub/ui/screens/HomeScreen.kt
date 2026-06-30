@@ -28,7 +28,7 @@ import com.watchlist.anihub.ui.theme.LocalTitleLanguage
 fun HomeScreen(
     onAnimeClick: (Int) -> Unit,
     onNotificationsClick: () -> Unit,
-    onHistoryClick: () -> Unit,
+    onCalendarClick: () -> Unit,
     onSettingsClick: () -> Unit,
     viewModel: HomeViewModel = hiltViewModel()
 ) {
@@ -53,8 +53,8 @@ fun HomeScreen(
                     IconButton(onClick = onNotificationsClick) {
                         Icon(ImageVector.vectorResource(R.drawable.bell), contentDescription = "Notifications")
                     }
-                    IconButton(onClick = onHistoryClick) {
-                        Icon(ImageVector.vectorResource(R.drawable.history), contentDescription = "History")
+                    IconButton(onClick = onCalendarClick) {
+                        Icon(ImageVector.vectorResource(R.drawable.calendar), contentDescription = "Airing Calendar")
                     }
                     IconButton(onClick = onSettingsClick) {
                         Icon(ImageVector.vectorResource(R.drawable.settings), contentDescription = "Settings")
@@ -132,6 +132,13 @@ fun AnimeSection(
                     contentAlignment = Alignment.Center
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Icon(
+                            imageVector = ImageVector.vectorResource(R.drawable.wifi_off),
+                            contentDescription = null,
+                            modifier = Modifier.size(48.dp),
+                            tint = MaterialTheme.colorScheme.error.copy(alpha = 0.6f)
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
                         Text(state.message, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.error)
                         TextButton(onClick = onRetry) {
                             Text("Retry")

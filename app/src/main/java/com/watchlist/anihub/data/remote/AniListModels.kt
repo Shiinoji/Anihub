@@ -1,9 +1,11 @@
 package com.watchlist.anihub.data.remote
 
+import com.squareup.moshi.Json
 import com.squareup.moshi.JsonClass
 
 import com.watchlist.anihub.ui.theme.ScoreFormat
 import com.watchlist.anihub.ui.theme.TitleLanguage
+import kotlin.math.roundToInt
 
 @JsonClass(generateAdapter = true)
 data class GraphQLRequest(
@@ -17,13 +19,29 @@ data class AniListResponse<T>(
 )
 
 @JsonClass(generateAdapter = true)
+data class GenreResponse(
+    @param:Json(name = "GenreCollection")
+    val genreCollection: List<String>
+)
+
+@JsonClass(generateAdapter = true)
 data class MediaResponse(
-    val Page: Page,
+    @param:Json(name = "Page")
+    val page: Page,
 )
 
 @JsonClass(generateAdapter = true)
 data class Page(
-    val media: List<Media>,
+    val media: List<Media>? = null,
+    val airingSchedules: List<AiringSchedule>? = null,
+)
+
+@JsonClass(generateAdapter = true)
+data class AiringSchedule(
+    val id: Int,
+    val episode: Int,
+    val airingAt: Long,
+    val media: Media,
 )
 
 @JsonClass(generateAdapter = true)
@@ -38,6 +56,7 @@ data class Media(
     val averageScore: Int?,
     val nextAiringEpisode: AiringEpisode?,
     val genres: List<String>?,
+    val trailer: MediaTrailer?,
     val characters: CharacterConnection?,
     val recommendations: RecommendationConnection?,
 ) {
@@ -46,8 +65,8 @@ data class Media(
         return when (format) {
             ScoreFormat.POINT_100 -> score.toString()
             ScoreFormat.POINT_10_DECIMAL -> "${score / 10.0}"
-            ScoreFormat.POINT_10 -> "${Math.round(score / 10.0f)}"
-            ScoreFormat.POINT_5 -> "${Math.round(score / 20.0f)}"
+            ScoreFormat.POINT_10 -> "${(score / 10.0f).roundToInt()}"
+            ScoreFormat.POINT_5 -> "${(score / 20.0f).roundToInt()}"
             ScoreFormat.POINT_3 -> {
                 when {
                     score >= 75 -> "3"
@@ -56,6 +75,19 @@ data class Media(
                 }
             }
         }
+    }
+}
+
+@JsonClass(generateAdapter = true)
+data class MediaTrailer(
+    val id: String?,
+    val site: String?,
+    val thumbnail: String?
+) {
+    val url: String? get() = when (site) {
+        "youtube" -> "https://www.youtube.com/watch?v=$id"
+        "dailymotion" -> "https://www.dailymotion.com/video/$id"
+        else -> null
     }
 }
 
@@ -120,7 +152,8 @@ data class MediaConnection(
 
 @JsonClass(generateAdapter = true)
 data class CharacterResponse(
-    val Character: Character
+    @param:Json(name = "Character")
+    val character: Character
 )
 
 @JsonClass(generateAdapter = true)

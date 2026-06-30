@@ -34,6 +34,10 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        
+        val startAnimeId = intent.getIntExtra("animeId", -1)
+        val startScreen = if (startAnimeId != -1) Screen.AnimeDetail(startAnimeId) else Screen.Home
+
         setContent {
             val themeMode by themeViewModel.themeMode.collectAsState()
             val colorPalette by themeViewModel.colorPalette.collectAsState()
@@ -58,16 +62,16 @@ class MainActivity : ComponentActivity() {
                 scoreFormat = scoreFormat,
                 showAiringCountdown = showAiringCountdown
             ) {
-                MainContent(themeViewModel)
+                MainContent(themeViewModel, startScreen)
             }
         }
     }
 }
 
 @Composable
-fun MainContent(themeViewModel: ThemeViewModel) {
-    var currentScreen: Screen by remember { mutableStateOf(Screen.Home) }
-    val backStack = remember { mutableStateListOf<Screen>(Screen.Home) }
+fun MainContent(themeViewModel: ThemeViewModel, startScreen: Screen = Screen.Home) {
+    var currentScreen by remember { mutableStateOf(startScreen) }
+    val backStack = remember { mutableStateListOf(startScreen) }
 
     fun navigateTo(screen: Screen) {
         if (currentScreen != screen) {
@@ -80,6 +84,18 @@ fun MainContent(themeViewModel: ThemeViewModel) {
         if (backStack.size > 1) {
             backStack.removeAt(backStack.size - 1)
             currentScreen = backStack.last()
+        }
+    }
+    
+    // If startScreen is not Home, ensure Home is at the bottom of the stack
+    LaunchedEffect(startScreen) {
+        if (startScreen != Screen.Home) {
+            if (backStack.firstOrNull() != Screen.Home) {
+                backStack.add(0, Screen.Home)
+            }
+            if (currentScreen != startScreen) {
+                navigateTo(startScreen)
+            }
         }
     }
 
@@ -109,7 +125,7 @@ fun MainContent(themeViewModel: ThemeViewModel) {
                 Screen.Home -> HomeScreen(
                     onAnimeClick = { navigateTo(Screen.AnimeDetail(it)) },
                     onNotificationsClick = { navigateTo(Screen.Notifications) },
-                    onHistoryClick = { navigateTo(Screen.History) },
+                    onCalendarClick = { navigateTo(Screen.Calendar) },
                     onSettingsClick = { navigateTo(Screen.Settings) }
                 )
                 Screen.Search -> SearchScreen(
@@ -121,6 +137,7 @@ fun MainContent(themeViewModel: ThemeViewModel) {
                 )
                 Screen.Settings -> SettingsScreen(
                     onBackClick = { navigateBack() },
+                    onHistoryClick = { navigateTo(Screen.History) },
                     viewModel = themeViewModel
                 )
                 Screen.History -> HistoryScreen(
@@ -128,6 +145,10 @@ fun MainContent(themeViewModel: ThemeViewModel) {
                     onAnimeClick = { navigateTo(Screen.AnimeDetail(it)) }
                 )
                 Screen.Notifications -> NotificationScreen(
+                    onBackClick = { navigateBack() },
+                    onAnimeClick = { navigateTo(Screen.AnimeDetail(it)) }
+                )
+                Screen.Calendar -> CalendarScreen(
                     onBackClick = { navigateBack() },
                     onAnimeClick = { navigateTo(Screen.AnimeDetail(it)) }
                 )

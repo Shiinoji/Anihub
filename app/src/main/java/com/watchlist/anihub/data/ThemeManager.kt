@@ -5,8 +5,11 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import com.watchlist.anihub.data.local.WatchlistStatus
+import com.watchlist.anihub.ui.screens.WatchlistSort
 import com.watchlist.anihub.ui.theme.AiringFormat
 import com.watchlist.anihub.ui.theme.ColorPalette
 import com.watchlist.anihub.ui.theme.ScoreFormat
@@ -34,6 +37,11 @@ class ThemeManager @Inject constructor(
     private val adultContentKey = booleanPreferencesKey("adult_content")
     private val showAiringCountdownKey = booleanPreferencesKey("show_airing_countdown")
     private val notificationsKey = booleanPreferencesKey("notifications_enabled")
+
+    // Watchlist Personalization
+    private val watchlistFilterKey = stringPreferencesKey("watchlist_filter")
+    private val watchlistSortKey = stringPreferencesKey("watchlist_sort")
+    private val watchlistItemsPerRowKey = intPreferencesKey("watchlist_items_per_row")
 
     val themeMode: Flow<ThemeMode> = context.dataStore.data.map { preferences ->
         val mode = preferences[themeModeKey] ?: ThemeMode.SYSTEM.name
@@ -75,6 +83,19 @@ class ThemeManager @Inject constructor(
 
     val notificationsEnabled: Flow<Boolean> = context.dataStore.data.map { preferences ->
         preferences[notificationsKey] ?: true
+    }
+
+    val watchlistFilterStatus: Flow<WatchlistStatus?> = context.dataStore.data.map { preferences ->
+        preferences[watchlistFilterKey]?.let { WatchlistStatus.valueOf(it) }
+    }
+
+    val watchlistSortOrder: Flow<WatchlistSort> = context.dataStore.data.map { preferences ->
+        val sort = preferences[watchlistSortKey] ?: WatchlistSort.LAST_ADDED.name
+        WatchlistSort.valueOf(sort)
+    }
+
+    val watchlistItemsPerRow: Flow<Int> = context.dataStore.data.map { preferences ->
+        preferences[watchlistItemsPerRowKey] ?: 2
     }
 
     suspend fun setThemeMode(mode: ThemeMode) {
@@ -128,6 +149,28 @@ class ThemeManager @Inject constructor(
     suspend fun setNotificationsEnabled(enabled: Boolean) {
         context.dataStore.edit { preferences ->
             preferences[notificationsKey] = enabled
+        }
+    }
+
+    suspend fun setWatchlistFilterStatus(status: WatchlistStatus?) {
+        context.dataStore.edit { preferences ->
+            if (status == null) {
+                preferences.remove(watchlistFilterKey)
+            } else {
+                preferences[watchlistFilterKey] = status.name
+            }
+        }
+    }
+
+    suspend fun setWatchlistSortOrder(sort: WatchlistSort) {
+        context.dataStore.edit { preferences ->
+            preferences[watchlistSortKey] = sort.name
+        }
+    }
+
+    suspend fun setWatchlistItemsPerRow(count: Int) {
+        context.dataStore.edit { preferences ->
+            preferences[watchlistItemsPerRowKey] = count
         }
     }
 }

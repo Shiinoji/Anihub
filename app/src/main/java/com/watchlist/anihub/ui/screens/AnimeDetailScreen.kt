@@ -7,9 +7,11 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
@@ -19,8 +21,10 @@ import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -28,6 +32,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import com.watchlist.anihub.R
+import com.watchlist.anihub.data.local.WatchlistStatus
 import com.watchlist.anihub.data.remote.Media
 import com.watchlist.anihub.ui.UiState
 import com.watchlist.anihub.ui.components.*
@@ -47,12 +52,14 @@ fun AnimeDetailScreen(
     val animeState by viewModel.animeDetail.collectAsState()
     val isInWatchlist by viewModel.isInWatchlist.collectAsState()
     val isFavorite by viewModel.isFavorite.collectAsState()
+    val watchlistStatus by viewModel.watchlistStatus.collectAsState()
     val isRefreshing by viewModel.isRefreshing.collectAsState()
     
     LaunchedEffect(animeId) {
         viewModel.fetchAnimeDetail(animeId)
     }
-
+    
+    //pull to refresh
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background
     ) { padding ->
@@ -69,6 +76,10 @@ fun AnimeDetailScreen(
                 }
                 is UiState.Success<*> -> {
                     val media = state.data as Media
+                    val isDark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
+                    val metadataColor = if (isDark) Color.White else Color.Black
+                    val metadataColorSecondary = metadataColor.copy(alpha = 0.8f)
+
                     Box(
                         modifier = Modifier.fillMaxSize()
                     ) {
@@ -91,15 +102,15 @@ fun AnimeDetailScreen(
                                             .blur(20.dp),
                                         contentScale = ContentScale.Crop
                                     )
-                                    // Dark Gradient Overlay
+                                    // Gradient Overlay
                                     Box(
                                         modifier = Modifier
                                             .fillMaxSize()
                                             .background(
                                                 Brush.verticalGradient(
                                                     colors = listOf(
-                                                        Color.Black.copy(alpha = 0.5f),
-                                                        Color.Transparent,
+                                                        if (isDark) Color.Black.copy(alpha = 0.6f) else Color.White.copy(alpha = 0.6f),
+                                                        if (isDark) Color.Black.copy(alpha = 0.2f) else Color.White.copy(alpha = 0.2f),
                                                         MaterialTheme.colorScheme.background
                                                     )
                                                 )
@@ -111,7 +122,7 @@ fun AnimeDetailScreen(
                                             .fillMaxSize()
                                             .statusBarsPadding()
                                     ) {
-                                        Spacer(modifier = Modifier.height(80.dp))
+                                        Spacer(modifier = Modifier.height(72.dp))
 
                                         // Metadata Header
                                         Row(
@@ -120,16 +131,21 @@ fun AnimeDetailScreen(
                                                 .fillMaxWidth(),
                                             verticalAlignment = Alignment.Bottom
                                         ) {
-                                            AsyncImage(
-                                                model = media.coverImage.extraLarge ?: media.coverImage.large,
-                                                contentDescription = null,
+                                            Card(
+                                                shape = RoundedCornerShape(12.dp),
+                                                elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
                                                 modifier = Modifier
                                                     .width(130.dp)
                                                     .height(190.dp)
-                                                    .clip(RoundedCornerShape(12.dp))
-                                                    .border(2.dp, MaterialTheme.colorScheme.surface, RoundedCornerShape(12.dp)),
-                                                contentScale = ContentScale.Crop
-                                            )
+                                                    .border(2.dp, MaterialTheme.colorScheme.surface, RoundedCornerShape(12.dp))
+                                            ) {
+                                                AsyncImage(
+                                                    model = media.coverImage.extraLarge ?: media.coverImage.large,
+                                                    contentDescription = null,
+                                                    modifier = Modifier.fillMaxSize(),
+                                                    contentScale = ContentScale.Crop
+                                                )
+                                            }
                                             Column(
                                                 modifier = Modifier
                                                     .padding(start = 16.dp)
@@ -143,29 +159,43 @@ fun AnimeDetailScreen(
                                                     text = media.title.getDisplayTitle(titleLanguage),
                                                     style = MaterialTheme.typography.titleLarge,
                                                     fontWeight = FontWeight.Bold,
-                                                    color = Color.White,
+                                                    color = metadataColor,
                                                     maxLines = 3,
                                                     overflow = TextOverflow.Ellipsis
                                                 )
                                                 Spacer(modifier = Modifier.height(8.dp))
-                                                Text("Status: ${media.status ?: "Unknown"}", style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(alpha = 0.9f))
+                                                
+                                                // Status and Episodes Chips/Rows
+                                                Surface(
+                                                    color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.1f),
+                                                    shape = RoundedCornerShape(4.dp)
+                                                ) {
+                                                    Text(
+                                                        text = "Status: ${media.status ?: "Unknown"}",
+                                                        style = MaterialTheme.typography.labelSmall,
+                                                        color = metadataColorSecondary,
+                                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                                    )
+                                                }
+                                                
+                                                Spacer(modifier = Modifier.height(4.dp))
                                                 
                                                 val episodesText = if (media.nextAiringEpisode != null) {
                                                     "Episodes: ${media.nextAiringEpisode.episode - 1} / ${media.episodes ?: "?"}"
                                                 } else {
                                                     "Episodes: ${media.episodes ?: "?"}"
                                                 }
-                                                Text(episodesText, style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(alpha = 0.9f))
+                                                Text(episodesText, style = MaterialTheme.typography.bodyMedium, color = metadataColorSecondary)
                                                 
-                                                Text("Score: ${media.getFormattedScore(scoreFormat)}", style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(alpha = 0.9f))
+                                                Text("Score: ${media.getFormattedScore(scoreFormat)}", style = MaterialTheme.typography.bodyMedium, color = metadataColorSecondary)
                                                 
                                                 if (showCountdown && media.nextAiringEpisode != null) {
                                                     Spacer(modifier = Modifier.height(4.dp))
                                                     Text(
                                                         "Ep ${media.nextAiringEpisode.episode} airing soon",
                                                         style = MaterialTheme.typography.labelSmall,
-                                                        color = MaterialTheme.colorScheme.primaryContainer,
-                                                        fontWeight = FontWeight.Bold
+                                                        color = MaterialTheme.colorScheme.primary,
+                                                        fontWeight = FontWeight.ExtraBold
                                                     )
                                                 }
                                             }
@@ -214,6 +244,86 @@ fun AnimeDetailScreen(
                                                     ),
                                                     border = null
                                                 )
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+
+                            // Watchlist Status Selector
+                            if (isInWatchlist) {
+                                item {
+                                    Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+                                        Text(
+                                            text = "Watchlist Status",
+                                            style = MaterialTheme.typography.titleMedium,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                        Spacer(modifier = Modifier.height(8.dp))
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                        ) {
+                                            WatchlistStatus.entries.forEach { status ->
+                                                FilterChip(
+                                                    selected = watchlistStatus == status,
+                                                    onClick = { viewModel.updateWatchlistStatus(status) },
+                                                    label = { Text(status.getDisplayName()) },
+                                                    leadingIcon = if (watchlistStatus == status) {
+                                                        { Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(16.dp)) }
+                                                    } else null,
+                                                    colors = FilterChipDefaults.filterChipColors(
+                                                        selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
+                                                        selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer
+                                                    )
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+
+                            // Trailer
+                            val trailer = media.trailer
+                            if (trailer != null && trailer.url != null) {
+                                item {
+                                    Column(modifier = Modifier.padding(16.dp)) {
+                                        Text(
+                                            text = "Trailer",
+                                            style = MaterialTheme.typography.titleMedium,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                        Spacer(modifier = Modifier.height(8.dp))
+                                        val uriHandler = LocalUriHandler.current
+                                        Card(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .height(200.dp)
+                                                .clickable { uriHandler.openUri(trailer.url!!) },
+                                            shape = RoundedCornerShape(12.dp)
+                                        ) {
+                                            Box(modifier = Modifier.fillMaxSize()) {
+                                                AsyncImage(
+                                                    model = trailer.thumbnail,
+                                                    contentDescription = "Trailer Thumbnail",
+                                                    modifier = Modifier.fillMaxSize(),
+                                                    contentScale = ContentScale.Crop
+                                                )
+                                                // Play Icon Overlay
+                                                Box(
+                                                    modifier = Modifier
+                                                        .size(64.dp)
+                                                        .align(Alignment.Center)
+                                                        .background(Color.Black.copy(alpha = 0.6f), CircleShape),
+                                                    contentAlignment = Alignment.Center
+                                                ) {
+                                                    Icon(
+                                                        imageVector = Icons.Default.PlayArrow,
+                                                        contentDescription = null,
+                                                        tint = Color.White,
+                                                        modifier = Modifier.size(32.dp)
+                                                    )
+                                                }
                                             }
                                         }
                                     }
@@ -305,19 +415,20 @@ fun AnimeDetailScreen(
                         ) {
                             HeaderIconButton(
                                 icon = ImageVector.vectorResource(R.drawable.arrow_left),
-                                onClick = onBackClick
+                                onClick = onBackClick,
+                                tint = metadataColor
                             )
                             Row {
                                 HeaderIconButton(
                                     icon = ImageVector.vectorResource(R.drawable.bookmark),
                                     onClick = { viewModel.toggleWatchlist() },
-                                    tint = if (isInWatchlist) MaterialTheme.colorScheme.primary else Color.White
+                                    tint = if (isInWatchlist) MaterialTheme.colorScheme.primary else metadataColor
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
                                 HeaderIconButton(
                                     icon = ImageVector.vectorResource(R.drawable.heart),
                                     onClick = { viewModel.toggleFavorite() },
-                                    tint = if (isFavorite) Color.Red else Color.White
+                                    tint = if (isFavorite) Color.Red else metadataColor
                                 )
                             }
                         }
