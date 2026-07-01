@@ -1,13 +1,18 @@
 package com.watchlist.anihub.ui.screens
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
@@ -17,6 +22,7 @@ import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.vectorResource
@@ -28,9 +34,8 @@ import coil.compose.AsyncImage
 import com.watchlist.anihub.R
 import com.watchlist.anihub.data.remote.Character
 import com.watchlist.anihub.ui.UiState
-import com.watchlist.anihub.ui.components.ErrorView
-import com.watchlist.anihub.ui.components.HeaderIconButton
-import com.watchlist.anihub.ui.components.SimpleAnimeCard
+import com.watchlist.anihub.ui.cleanDescription
+import com.watchlist.anihub.ui.components.*
 import com.watchlist.anihub.ui.theme.LocalTitleLanguage
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -60,17 +65,27 @@ fun CharacterDetailScreen(
         ) {
             when (val state = characterState) {
                 is UiState.Loading -> {
-                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator()
-                    }
+                    AnimeDetailSkeleton() // Using the same skeleton as AnimeDetail as it matches the layout
                 }
                 is UiState.Success<Character> -> {
                     val char = state.data
+                    val isDark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
+                    val metadataColor = if (isDark) Color.White else Color.Black
+                    val metadataColorSecondary = metadataColor.copy(alpha = 0.8f)
+
+                    val scrollState = rememberLazyListState()
+                    val showStickyHeader by remember {
+                        derivedStateOf {
+                            scrollState.firstVisibleItemIndex > 0 || scrollState.firstVisibleItemScrollOffset > 200
+                        }
+                    }
+
                     Box(
                         modifier = Modifier.fillMaxSize()
                     ) {
                         LazyColumn(
-                            modifier = Modifier.fillMaxSize()
+                            modifier = Modifier.fillMaxSize(),
+                            state = scrollState
                         ) {
                             // Blurred Header
                             item {
@@ -88,15 +103,15 @@ fun CharacterDetailScreen(
                                             .blur(20.dp),
                                         contentScale = ContentScale.Crop
                                     )
-                                    // Dark Gradient
+                                    // Gradient Overlay
                                     Box(
                                         modifier = Modifier
                                             .fillMaxSize()
                                             .background(
                                                 Brush.verticalGradient(
                                                     colors = listOf(
-                                                        Color.Black.copy(alpha = 0.5f),
-                                                        Color.Transparent,
+                                                        if (isDark) Color.Black.copy(alpha = 0.6f) else Color.White.copy(alpha = 0.6f),
+                                                        if (isDark) Color.Black.copy(alpha = 0.2f) else Color.White.copy(alpha = 0.2f),
                                                         MaterialTheme.colorScheme.background
                                                     )
                                                 )
@@ -108,7 +123,7 @@ fun CharacterDetailScreen(
                                             .fillMaxSize()
                                             .statusBarsPadding()
                                     ) {
-                                        Spacer(modifier = Modifier.height(80.dp))
+                                        Spacer(modifier = Modifier.height(72.dp))
 
                                         Row(
                                             modifier = Modifier
@@ -120,10 +135,9 @@ fun CharacterDetailScreen(
                                                 model = char.image.large,
                                                 contentDescription = null,
                                                 modifier = Modifier
-                                                    .width(130.dp)
-                                                    .height(190.dp)
-                                                    .clip(RoundedCornerShape(12.dp))
-                                                    .border(2.dp, MaterialTheme.colorScheme.surface, RoundedCornerShape(12.dp)),
+                                                    .size(130.dp)
+                                                    .clip(CircleShape)
+                                                    .border(4.dp, MaterialTheme.colorScheme.surface, CircleShape),
                                                 contentScale = ContentScale.Crop
                                             )
                                             Column(
@@ -135,18 +149,18 @@ fun CharacterDetailScreen(
                                                     text = char.name.full ?: "Unknown",
                                                     style = MaterialTheme.typography.headlineSmall,
                                                     fontWeight = FontWeight.Bold,
-                                                    color = Color.White
+                                                    color = metadataColor
                                                 )
                                                 Spacer(modifier = Modifier.height(8.dp))
                                                 
                                                 char.gender?.let {
-                                                    Text("Gender: $it", style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(alpha = 0.9f))
+                                                    Text("Gender: $it", style = MaterialTheme.typography.bodyMedium, color = metadataColorSecondary)
                                                 }
                                                 char.age?.let {
-                                                    Text("Age: $it", style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(alpha = 0.9f))
+                                                    Text("Age: $it", style = MaterialTheme.typography.bodyMedium, color = metadataColorSecondary)
                                                 }
                                                 char.bloodType?.let {
-                                                    Text("Blood Type: $it", style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(alpha = 0.9f))
+                                                    Text("Blood Type: $it", style = MaterialTheme.typography.bodyMedium, color = metadataColorSecondary)
                                                 }
                                             }
                                         }
@@ -165,7 +179,7 @@ fun CharacterDetailScreen(
                                     )
                                     Spacer(modifier = Modifier.height(4.dp))
                                     Text(
-                                        text = char.description?.replace(Regex("<.*?>"), "") ?: "No biography available",
+                                        text = char.description.cleanDescription().ifEmpty { "No biography available" },
                                         style = MaterialTheme.typography.bodyMedium,
                                         maxLines = if (expanded) Int.MAX_VALUE else 6,
                                         overflow = TextOverflow.Ellipsis,
@@ -191,15 +205,13 @@ fun CharacterDetailScreen(
                                         contentPadding = PaddingValues(horizontal = 16.dp),
                                         horizontalArrangement = Arrangement.spacedBy(12.dp)
                                     ) {
-                                        for (anime in animeList) {
-                                            item {
-                                                SimpleAnimeCard(
-                                                    title = anime.title.getDisplayTitle(titleLanguage),
-                                                    imageUrl = anime.coverImage.extraLarge ?: anime.coverImage.large ?: "",
-                                                    onClick = { onAnimeClick(anime.id) },
-                                                    modifier = Modifier.width(120.dp)
-                                                )
-                                            }
+                                        items(animeList) { anime ->
+                                            SimpleAnimeCard(
+                                                title = anime.title.getDisplayTitle(titleLanguage),
+                                                imageUrl = anime.coverImage.extraLarge ?: anime.coverImage.large ?: "",
+                                                onClick = { onAnimeClick(anime.id) },
+                                                modifier = Modifier.width(120.dp)
+                                            )
                                         }
                                     }
                                 }
@@ -207,18 +219,43 @@ fun CharacterDetailScreen(
                         }
 
                         // Header Buttons
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .statusBarsPadding()
-                                .padding(8.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
+                        Box(
+                            modifier = Modifier.fillMaxWidth()
                         ) {
-                            HeaderIconButton(
-                                icon = ImageVector.vectorResource(R.drawable.arrow_left),
-                                onClick = onBackClick
-                            )
+                            // Frosted Glass Header Background (appears on scroll)
+                            AnimatedVisibility(
+                                visible = showStickyHeader,
+                                enter = fadeIn(),
+                                exit = fadeOut()
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(140.dp)
+                                        .background(
+                                            Brush.verticalGradient(
+                                                0f to MaterialTheme.colorScheme.surface.copy(alpha = 0.98f),
+                                                0.6f to MaterialTheme.colorScheme.surface.copy(alpha = 0.85f),
+                                                1f to Color.Transparent
+                                            )
+                                        )
+                                )
+                            }
+
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .statusBarsPadding()
+                                    .padding(horizontal = 8.dp, vertical = 8.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                HeaderIconButton(
+                                    icon = ImageVector.vectorResource(R.drawable.arrow_left),
+                                    onClick = onBackClick,
+                                    tint = metadataColor
+                                )
+                            }
                         }
                     }
                 }

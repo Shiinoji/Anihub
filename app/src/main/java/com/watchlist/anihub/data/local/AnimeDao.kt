@@ -46,6 +46,9 @@ interface AnimeDao {
     @Query("UPDATE notifications SET isRead = 1 WHERE id = :id")
     suspend fun markAsRead(id: Int)
 
+    @Query("SELECT EXISTS(SELECT * FROM notifications WHERE animeId = :animeId AND type = :type)")
+    suspend fun hasNotification(animeId: Int, type: String): Boolean
+
     @Query("DELETE FROM notifications")
     suspend fun clearNotifications()
 

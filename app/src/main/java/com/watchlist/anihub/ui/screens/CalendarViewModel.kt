@@ -96,7 +96,9 @@ class CalendarViewModel @Inject constructor(
                         )
                     )
 
-                    val schedules = response.data.page.airingSchedules?.map { 
+                    if (response.errors != null) break
+
+                    val schedules = response.data?.page?.airingSchedules?.map {
                         AiringScheduleEntity(
                             id = it.id,
                             animeId = it.media.id,

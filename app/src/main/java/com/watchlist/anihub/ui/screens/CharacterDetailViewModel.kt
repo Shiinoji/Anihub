@@ -8,8 +8,6 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import java.io.IOException
-import java.net.UnknownHostException
 import javax.inject.Inject
 
 @HiltViewModel
@@ -30,7 +28,13 @@ class CharacterDetailViewModel @Inject constructor(
                 val response = aniListService.getCharacterDetail(
                     GraphQLRequest(AniListQueries.CHARACTER_DETAIL, mapOf("id" to id))
                 )
-                _characterDetail.value = UiState.Success(response.data.character)
+                
+                if (response.errors != null) {
+                    throw Exception(response.errors.firstOrNull()?.message ?: "Unknown error")
+                }
+                
+                val character = response.data?.character ?: throw Exception("No data found")
+                _characterDetail.value = UiState.Success(character)
             } catch (e: Exception) {
                 _characterDetail.value = UiState.Error(getErrorMessage(e))
             } finally {
@@ -44,10 +48,5 @@ class CharacterDetailViewModel @Inject constructor(
         fetchCharacterDetail(id)
     }
 
-    private fun getErrorMessage(e: Exception): String {
-        return when (e) {
-            is UnknownHostException, is IOException -> "No internet connection."
-            else -> "Failed to load character details."
-        }
-    }
+    private fun getErrorMessage(e: Exception): String = NetworkUtils.getErrorMessage(e)
 }

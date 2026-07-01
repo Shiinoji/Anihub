@@ -274,7 +274,7 @@ fun SettingsScreen(
             // AniList Sync Settings
             SettingsSection(title = "Anime Discovery") {
                 SettingsClickableRow(
-                    label = "Watch History",
+                    label = "History",
                     description = "View your recently watched anime",
                     icon = ImageVector.vectorResource(R.drawable.history),
                     onClick = onHistoryClick
@@ -491,7 +491,7 @@ fun SettingsScreen(
                     fontWeight = FontWeight.SemiBold
                 )
                 Text(
-                    text = "Anime Watchlist and Tracker App built with Anilist API.",
+                    text = "Anime Watchlist and Tracker App built with AniList API.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

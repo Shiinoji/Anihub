@@ -13,8 +13,6 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import java.io.IOException
-import java.net.UnknownHostException
 import javax.inject.Inject
 
 @HiltViewModel
@@ -64,7 +62,12 @@ class AnimeDetailViewModel @Inject constructor(
                 val response = aniListService.getAnimeDetail(
                     GraphQLRequest(AniListQueries.ANIME_DETAIL, mapOf("id" to id))
                 )
-                val media = response.data.media
+                
+                if (response.errors != null) {
+                    throw Exception(response.errors.firstOrNull()?.message ?: "Unknown error")
+                }
+                
+                val media = response.data?.media ?: throw Exception("No data found")
                 _animeDetail.value = UiState.Success(media)
                 
                 val currentLocalAnime = animeDao.getAnime(id)
@@ -115,7 +118,18 @@ class AnimeDetailViewModel @Inject constructor(
                     animeDao.deleteAnime(AnimeEntity(media.id, media.title.displayTitle, media.coverImage.extraLarge ?: "", _isFavorite.value, status = _watchlistStatus.value))
                 } else {
                     val detailJson = mediaAdapter.toJson(media)
-                    animeDao.insertAnime(AnimeEntity(media.id, media.title.displayTitle, media.coverImage.extraLarge ?: "", _isFavorite.value, status = _watchlistStatus.value, detailJson = detailJson))
+                    val currentEpisode = media.nextAiringEpisode?.episode?.minus(1) ?: 0
+                    animeDao.insertAnime(
+                        AnimeEntity(
+                            id = media.id,
+                            title = media.title.displayTitle,
+                            imageUrl = media.coverImage.extraLarge ?: "",
+                            isFavorite = _isFavorite.value,
+                            status = _watchlistStatus.value,
+                            detailJson = detailJson,
+                            lastNotifiedEpisode = currentEpisode
+                        )
+                    )
                 }
                 _isInWatchlist.value = !_isInWatchlist.value
             }
@@ -128,12 +142,14 @@ class AnimeDetailViewModel @Inject constructor(
             val media = state.data
             viewModelScope.launch {
                 val currentlyFavorite = _isFavorite.value
+                val currentEpisode = media.nextAiringEpisode?.episode?.minus(1) ?: 0
                 val anime = animeDao.getAnime(media.id) ?: AnimeEntity(
                     id = media.id,
                     title = media.title.displayTitle,
                     imageUrl = media.coverImage.extraLarge ?: "",
                     isFavorite = false,
-                    detailJson = mediaAdapter.toJson(media)
+                    detailJson = mediaAdapter.toJson(media),
+                    lastNotifiedEpisode = currentEpisode
                 )
                 
                 val updatedAnime = anime.copy(isFavorite = !currentlyFavorite)
@@ -149,12 +165,14 @@ class AnimeDetailViewModel @Inject constructor(
         if (state is UiState.Success) {
             val media = state.data
             viewModelScope.launch {
+                val currentEpisode = media.nextAiringEpisode?.episode?.minus(1) ?: 0
                 val anime = animeDao.getAnime(media.id) ?: AnimeEntity(
                     id = media.id,
                     title = media.title.displayTitle,
                     imageUrl = media.coverImage.extraLarge ?: "",
                     isFavorite = _isFavorite.value,
-                    detailJson = mediaAdapter.toJson(media)
+                    detailJson = mediaAdapter.toJson(media),
+                    lastNotifiedEpisode = currentEpisode
                 )
                 val updatedAnime = anime.copy(status = status)
                 animeDao.insertAnime(updatedAnime)
@@ -164,10 +182,5 @@ class AnimeDetailViewModel @Inject constructor(
         }
     }
 
-    private fun getErrorMessage(e: Exception): String {
-        return when (e) {
-            is UnknownHostException, is IOException -> "No internet connection."
-            else -> "Failed to load anime details."
-        }
-    }
+    private fun getErrorMessage(e: Exception): String = NetworkUtils.getErrorMessage(e)
 }

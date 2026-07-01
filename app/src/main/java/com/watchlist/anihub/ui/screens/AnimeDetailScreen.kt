@@ -7,11 +7,14 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.outlined.BookmarkBorder
+import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
@@ -35,6 +38,7 @@ import com.watchlist.anihub.R
 import com.watchlist.anihub.data.local.WatchlistStatus
 import com.watchlist.anihub.data.remote.Media
 import com.watchlist.anihub.ui.UiState
+import com.watchlist.anihub.ui.cleanDescription
 import com.watchlist.anihub.ui.components.*
 import com.watchlist.anihub.ui.theme.LocalScoreFormat
 import com.watchlist.anihub.ui.theme.LocalShowAiringCountdown
@@ -79,12 +83,20 @@ fun AnimeDetailScreen(
                     val isDark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
                     val metadataColor = if (isDark) Color.White else Color.Black
                     val metadataColorSecondary = metadataColor.copy(alpha = 0.8f)
+                    
+                    val scrollState = rememberLazyListState()
+                    val showStickyHeader by remember {
+                        derivedStateOf {
+                            scrollState.firstVisibleItemIndex > 0 || scrollState.firstVisibleItemScrollOffset > 200
+                        }
+                    }
 
                     Box(
                         modifier = Modifier.fillMaxSize()
                     ) {
                         LazyColumn(
-                            modifier = Modifier.fillMaxSize()
+                            modifier = Modifier.fillMaxSize(),
+                            state = scrollState
                         ) {
                             // Blurred Background & Banner
                             item {
@@ -165,17 +177,40 @@ fun AnimeDetailScreen(
                                                 )
                                                 Spacer(modifier = Modifier.height(8.dp))
                                                 
-                                                // Status and Episodes Chips/Rows
-                                                Surface(
-                                                    color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.1f),
-                                                    shape = RoundedCornerShape(4.dp)
-                                                ) {
+                                                // Type and Status Chips/Rows
+                                                Row(verticalAlignment = Alignment.CenterVertically) {
                                                     Text(
-                                                        text = "Status: ${media.status ?: "Unknown"}",
-                                                        style = MaterialTheme.typography.labelSmall,
-                                                        color = metadataColorSecondary,
-                                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                                        text = "Type: ",
+                                                        style = MaterialTheme.typography.bodyMedium,
+                                                        color = metadataColorSecondary
                                                     )
+                                                    Text(
+                                                        text = media.format ?: "Unknown",
+                                                        style = MaterialTheme.typography.bodyMedium,
+                                                        color = metadataColorSecondary,
+                                                        fontWeight = FontWeight.Bold
+                                                    )
+                                                }
+                                                
+                                                Spacer(modifier = Modifier.height(4.dp))
+
+                                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                                    Text(
+                                                        text = "Status: ",
+                                                        style = MaterialTheme.typography.bodyMedium,
+                                                        color = metadataColorSecondary
+                                                    )
+                                                    Surface(
+                                                        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.1f),
+                                                        shape = RoundedCornerShape(4.dp)
+                                                    ) {
+                                                        Text(
+                                                            text = media.status ?: "Unknown",
+                                                            style = MaterialTheme.typography.bodyMedium,
+                                                            color = metadataColorSecondary,
+                                                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                                        )
+                                                    }
                                                 }
                                                 
                                                 Spacer(modifier = Modifier.height(4.dp))
@@ -193,7 +228,7 @@ fun AnimeDetailScreen(
                                                     Spacer(modifier = Modifier.height(4.dp))
                                                     Text(
                                                         "Ep ${media.nextAiringEpisode.episode} airing soon",
-                                                        style = MaterialTheme.typography.labelSmall,
+                                                        style = MaterialTheme.typography.bodyMedium,
                                                         color = MaterialTheme.colorScheme.primary,
                                                         fontWeight = FontWeight.ExtraBold
                                                     )
@@ -204,7 +239,7 @@ fun AnimeDetailScreen(
                                 }
                             }
 
-                            // Description
+                            // Description of the Anime Display
                             item {
                                 var expanded by remember { mutableStateOf(false) }
                                 Column(modifier = Modifier.padding(16.dp)) {
@@ -215,7 +250,7 @@ fun AnimeDetailScreen(
                                     )
                                     Spacer(modifier = Modifier.height(4.dp))
                                     Text(
-                                        text = media.description?.replace(Regex("<.*?>"), "") ?: "No description available",
+                                        text = media.description.cleanDescription().ifEmpty { "No description available" },
                                         style = MaterialTheme.typography.bodyMedium,
                                         maxLines = if (expanded) Int.MAX_VALUE else 4,
                                         overflow = TextOverflow.Ellipsis,
@@ -283,7 +318,7 @@ fun AnimeDetailScreen(
                                 }
                             }
 
-                            // Trailer
+                            // YouTube and DailyMotion External trailer redirect
                             val trailer = media.trailer
                             if (trailer != null && trailer.url != null) {
                                 item {
@@ -309,7 +344,7 @@ fun AnimeDetailScreen(
                                                     modifier = Modifier.fillMaxSize(),
                                                     contentScale = ContentScale.Crop
                                                 )
-                                                // Play Icon Overlay
+                                                // Play Icon Overlay for trailer
                                                 Box(
                                                     modifier = Modifier
                                                         .size(64.dp)
@@ -330,7 +365,7 @@ fun AnimeDetailScreen(
                                 }
                             }
 
-                            // Characters
+                            // Anime Characters
                             val charactersNodes = media.characters?.nodes
                             if (!charactersNodes.isNullOrEmpty()) {
                                 item {
@@ -344,37 +379,35 @@ fun AnimeDetailScreen(
                                         contentPadding = PaddingValues(horizontal = 16.dp),
                                         horizontalArrangement = Arrangement.spacedBy(16.dp)
                                     ) {
-                                        for (character in charactersNodes) {
-                                            item {
-                                                Column(
-                                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                        items(charactersNodes) { character ->
+                                            Column(
+                                                horizontalAlignment = Alignment.CenterHorizontally,
+                                                modifier = Modifier
+                                                    .width(80.dp)
+                                                    .clickable { onCharacterClick(character.id) }
+                                            ) {
+                                                AsyncImage(
+                                                    model = character.image.large,
+                                                    contentDescription = null,
                                                     modifier = Modifier
-                                                        .width(80.dp)
-                                                        .clickable { onCharacterClick(character.id) }
-                                                ) {
-                                                    AsyncImage(
-                                                        model = character.image.large,
-                                                        contentDescription = null,
-                                                        modifier = Modifier
-                                                            .size(70.dp)
-                                                            .clip(CircleShape),
-                                                        contentScale = ContentScale.Crop
-                                                    )
-                                                    Text(
-                                                        text = character.name.full ?: "",
-                                                        style = MaterialTheme.typography.labelSmall,
-                                                        maxLines = 1,
-                                                        overflow = TextOverflow.Ellipsis,
-                                                        modifier = Modifier.padding(top = 4.dp)
-                                                    )
-                                                }
+                                                        .size(70.dp)
+                                                        .clip(CircleShape),
+                                                    contentScale = ContentScale.Crop
+                                                )
+                                                Text(
+                                                    text = character.name.full ?: "",
+                                                    style = MaterialTheme.typography.labelSmall,
+                                                    maxLines = 1,
+                                                    overflow = TextOverflow.Ellipsis,
+                                                    modifier = Modifier.padding(top = 4.dp)
+                                                )
                                             }
                                         }
                                     }
                                 }
                             }
 
-                            // Recommendations
+                            // Recommendations below of the staff
                             val recommendationsNodes = media.recommendations?.nodes
                             if (!recommendationsNodes.isNullOrEmpty()) {
                                 item {
@@ -388,15 +421,13 @@ fun AnimeDetailScreen(
                                         contentPadding = PaddingValues(horizontal = 16.dp),
                                         horizontalArrangement = Arrangement.spacedBy(12.dp)
                                     ) {
-                                        for (rec in recommendationsNodes) {
+                                        items(recommendationsNodes) { rec ->
                                             val recommendedMedia = rec.mediaRecommendation
                                             if (recommendedMedia != null) {
-                                                item {
-                                                    AnimeCard(
-                                                        media = recommendedMedia,
-                                                        onClick = { onAnimeClick(recommendedMedia.id) }
-                                                    )
-                                                }
+                                                AnimeCard(
+                                                    media = recommendedMedia,
+                                                    onClick = { onAnimeClick(recommendedMedia.id) }
+                                                )
                                             }
                                         }
                                     }
@@ -404,32 +435,58 @@ fun AnimeDetailScreen(
                             }
                         }
 
-                        // Header Overlay (Buttons)
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .statusBarsPadding()
-                                .padding(8.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
+                        // Header Overlay (Sticky Top)
+                        Box(
+                            modifier = Modifier.fillMaxWidth()
                         ) {
-                            HeaderIconButton(
-                                icon = ImageVector.vectorResource(R.drawable.arrow_left),
-                                onClick = onBackClick,
-                                tint = metadataColor
-                            )
-                            Row {
-                                HeaderIconButton(
-                                    icon = ImageVector.vectorResource(R.drawable.bookmark),
-                                    onClick = { viewModel.toggleWatchlist() },
-                                    tint = if (isInWatchlist) MaterialTheme.colorScheme.primary else metadataColor
+                            // Frosted Glass Blur Header Background (appears on scroll)
+                            androidx.compose.animation.AnimatedVisibility(
+                                visible = showStickyHeader,
+                                enter = androidx.compose.animation.fadeIn(),
+                                exit = androidx.compose.animation.fadeOut()
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(140.dp)
+                                        .background(
+                                            Brush.verticalGradient(
+                                                0f to MaterialTheme.colorScheme.surface.copy(alpha = 0.98f),
+                                                0.6f to MaterialTheme.colorScheme.surface.copy(alpha = 0.85f),
+                                                1f to Color.Transparent
+                                            )
+                                        )
                                 )
-                                Spacer(modifier = Modifier.width(8.dp))
+                            }
+
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .statusBarsPadding()
+                                    .padding(horizontal = 8.dp, vertical = 8.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
                                 HeaderIconButton(
-                                    icon = ImageVector.vectorResource(R.drawable.heart),
-                                    onClick = { viewModel.toggleFavorite() },
-                                    tint = if (isFavorite) Color.Red else metadataColor
+                                    icon = ImageVector.vectorResource(R.drawable.arrow_left),
+                                    onClick = onBackClick,
+                                    tint = metadataColor
                                 )
+
+                                Row(
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    HeaderIconButton(
+                                        icon = if (isFavorite) Icons.Default.Favorite else Icons.Outlined.FavoriteBorder,
+                                        onClick = { viewModel.toggleFavorite() },
+                                        tint = if (isFavorite) Color.Red else metadataColor
+                                    )
+                                    HeaderIconButton(
+                                        icon = if (isInWatchlist) Icons.Default.Bookmark else Icons.Outlined.BookmarkBorder,
+                                        onClick = { viewModel.toggleWatchlist() },
+                                        tint = if (isInWatchlist) MaterialTheme.colorScheme.primary else metadataColor
+                                    )
+                                }
                             }
                         }
                     }

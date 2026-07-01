@@ -10,7 +10,7 @@ import retrofit2.http.Url
 @JsonClass(generateAdapter = true)
 data class SingleMediaResponse(
     @param:Json(name = "Media")
-    val media: Media,
+    val media: Media? = null,
 )
 
 interface AniListService {
@@ -99,6 +99,7 @@ object AniListQueries {
             coverImage { extraLarge large medium }
             bannerImage
             description
+            format
             status
             episodes
             averageScore
@@ -149,7 +150,7 @@ object AniListQueries {
     const val AIRING_SCHEDULE = """
         query (${'$'}start: Int, ${'$'}end: Int, ${'$'}page: Int) {
           Page(page: ${'$'}page, perPage: 50) {
-            airingSchedules(airingAt_greater: ${'$'}start, airingAt_less: ${'$'}end) {
+            airingSchedules(airingAt_greater: ${'$'}start, airingAt_lesser: ${'$'}end) {
               id
               episode
               airingAt

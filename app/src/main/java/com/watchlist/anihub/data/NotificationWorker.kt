@@ -45,7 +45,7 @@ class NotificationWorker @AssistedInject constructor(
                 GraphQLRequest(AniListQueries.AIRING_CHECK, mapOf("ids" to ids))
             )
 
-            response.data.page.media?.forEach { media ->
+            response.data?.page?.media?.forEach { media ->
                 val localAnime = watchlist.find { it.id == media.id } ?: return@forEach
                 val currentEpisode = media.nextAiringEpisode?.episode?.minus(1) ?: 0
                 
@@ -101,7 +101,7 @@ class NotificationWorker @AssistedInject constructor(
                     )
                 )
 
-                val schedules = response.data.page.airingSchedules?.map { 
+                val schedules = response.data?.page?.airingSchedules?.map { 
                     AiringScheduleEntity(
                         id = it.id,
                         animeId = it.media.id,
@@ -134,18 +134,26 @@ class NotificationWorker @AssistedInject constructor(
             )
             val watchlistIds = animeDao.getWatchlist().first().map { it.id }
             
-            response.data.page.media?.forEach { media ->
+            response.data?.page?.media?.forEach { media ->
                 if (!watchlistIds.contains(media.id)) {
-                    // Notify about a new trending anime
-                    animeDao.insertNotification(
-                        NotificationEntity(
-                            type = "ANIME_RELEASE",
-                            title = "New Trending: ${media.title.displayTitle}",
-                            message = "Everyone is talking about this! check it out.",
-                            animeId = media.id,
-                            imageUrl = media.coverImage.medium
+                    // Check if we've already notified about this trending anime
+                    if (!animeDao.hasNotification(media.id, "ANIME_RELEASE")) {
+                        // Phone notification
+                        notificationHelper.showNewAnimeNotification(
+                            animeTitle = media.title.displayTitle,
+                            animeId = media.id
                         )
-                    )
+                        // Add to in-app notifications
+                        animeDao.insertNotification(
+                            NotificationEntity(
+                                type = "ANIME_RELEASE",
+                                title = "New Trending: ${media.title.displayTitle}",
+                                message = "Everyone is talking about this! check it out.",
+                                animeId = media.id,
+                                imageUrl = media.coverImage.medium
+                            )
+                        )
+                    }
                 }
             }
         } catch (e: Exception) {}

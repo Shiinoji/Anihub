@@ -23,6 +23,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import com.watchlist.anihub.R
 import com.watchlist.anihub.data.local.AiringScheduleEntity
+import com.watchlist.anihub.ui.components.AiringAnimeRowSkeleton
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -83,7 +84,16 @@ fun CalendarScreen(
                 if (schedule.isEmpty()) {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         if (isRefreshing) {
-                            CircularProgressIndicator()
+                            LazyColumn(
+                                modifier = Modifier.fillMaxSize(),
+                                contentPadding = PaddingValues(16.dp),
+                                verticalArrangement = Arrangement.spacedBy(12.dp),
+                                userScrollEnabled = false
+                            ) {
+                                items(8) {
+                                    AiringAnimeRowSkeleton()
+                                }
+                            }
                         } else {
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                 Icon(

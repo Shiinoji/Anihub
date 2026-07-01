@@ -24,7 +24,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.watchlist.anihub.R
+import com.watchlist.anihub.ui.UiState
+import com.watchlist.anihub.ui.components.ErrorView
 import com.watchlist.anihub.ui.components.SimpleAnimeCard
+import com.watchlist.anihub.ui.components.SimpleAnimeCardSkeleton
 import com.watchlist.anihub.ui.theme.LocalTitleLanguage
 import java.util.Calendar
 
@@ -35,6 +38,7 @@ fun SearchScreen(
     viewModel: SearchViewModel = hiltViewModel()
 ) {
     val results by viewModel.searchResults.collectAsState()
+    val searchQuery by viewModel.searchQuery.collectAsState()
     val genres by viewModel.genres.collectAsState()
     val selectedGenre by viewModel.selectedGenre.collectAsState()
     val selectedYear by viewModel.selectedYear.collectAsState()
@@ -42,7 +46,6 @@ fun SearchScreen(
     val selectedStatus by viewModel.selectedStatus.collectAsState()
     val selectedSort by viewModel.selectedSort.collectAsState()
 
-    var query by remember { mutableStateOf("") }
     var showFilterSheet by remember { mutableStateOf(false) }
 
     if (showFilterSheet) {
@@ -173,12 +176,15 @@ fun SearchScreen(
     Scaffold(
         topBar = {
             SearchBar(
-                query = query,
+                query = searchQuery,
                 onQueryChange = {
-                    query = it
-                    viewModel.searchAnime(it)
+                    viewModel.onQueryChange(it)
                 },
-                onSearch = { viewModel.searchAnime(it) },
+                onSearch = { 
+                    if (it.isNotBlank()) {
+                        viewModel.onSearchExplicit(it)
+                    }
+                },
                 active = false,
                 onActiveChange = {},
                 placeholder = { Text("Search Anime") },
@@ -196,21 +202,73 @@ fun SearchScreen(
         }
     ) { padding ->
         val titleLanguage = LocalTitleLanguage.current
-        LazyVerticalGrid(
-            columns = GridCells.Adaptive(140.dp),
+        
+        Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(padding),
-            contentPadding = PaddingValues(16.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+                .padding(padding)
         ) {
-            items(results) { anime ->
-                SimpleAnimeCard(
-                    title = anime.title.getDisplayTitle(titleLanguage),
-                    imageUrl = anime.coverImage.extraLarge ?: anime.coverImage.large ?: "",
-                    onClick = { onAnimeClick(anime.id) }
-                )
+            when (val state = results) {
+                is UiState.Loading -> {
+                    LazyVerticalGrid(
+                        columns = GridCells.Adaptive(140.dp),
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(16.dp),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                        userScrollEnabled = false
+                    ) {
+                        items(10) {
+                            SimpleAnimeCardSkeleton()
+                        }
+                    }
+                }
+                is UiState.Success -> {
+                    val animeList = state.data
+                    if (animeList.isEmpty()) {
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Icon(
+                                    imageVector = ImageVector.vectorResource(R.drawable.search),
+                                    contentDescription = null,
+                                    modifier = Modifier.size(80.dp),
+                                    tint = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
+                                )
+                                Spacer(modifier = Modifier.height(16.dp))
+                                Text(
+                                    text = if (searchQuery.isBlank()) "Search for your favorite anime" else "No anime found",
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = MaterialTheme.colorScheme.outline
+                                )
+                            }
+                        }
+                    } else {
+                        LazyVerticalGrid(
+                            columns = GridCells.Adaptive(140.dp),
+                            modifier = Modifier.fillMaxSize(),
+                            contentPadding = PaddingValues(16.dp),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            items(animeList) { anime ->
+                                SimpleAnimeCard(
+                                    title = anime.title.getDisplayTitle(titleLanguage),
+                                    imageUrl = anime.coverImage.extraLarge ?: anime.coverImage.large ?: "",
+                                    onClick = { onAnimeClick(anime.id) }
+                                )
+                            }
+                        }
+                    }
+                }
+                is UiState.Error -> {
+                    ErrorView(
+                        message = state.message,
+                        onRetry = { viewModel.onSearchExplicit(searchQuery) }
+                    )
+                }
             }
         }
     }

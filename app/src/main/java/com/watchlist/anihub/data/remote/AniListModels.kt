@@ -15,19 +15,26 @@ data class GraphQLRequest(
 
 @JsonClass(generateAdapter = true)
 data class AniListResponse<T>(
-    val data: T
+    val data: T? = null,
+    val errors: List<AniListError>? = null
+)
+
+@JsonClass(generateAdapter = true)
+data class AniListError(
+    val message: String,
+    val status: Int? = null
 )
 
 @JsonClass(generateAdapter = true)
 data class GenreResponse(
     @param:Json(name = "GenreCollection")
-    val genreCollection: List<String>
+    val genreCollection: List<String>? = null
 )
 
 @JsonClass(generateAdapter = true)
 data class MediaResponse(
     @param:Json(name = "Page")
-    val page: Page,
+    val page: Page? = null,
 )
 
 @JsonClass(generateAdapter = true)
@@ -51,6 +58,7 @@ data class Media(
     val coverImage: MediaCoverImage,
     val bannerImage: String?,
     val description: String?,
+    val format: String?,
     val status: String?,
     val episodes: Int?,
     val averageScore: Int?,
@@ -153,7 +161,7 @@ data class MediaConnection(
 @JsonClass(generateAdapter = true)
 data class CharacterResponse(
     @param:Json(name = "Character")
-    val character: Character
+    val character: Character? = null
 )
 
 @JsonClass(generateAdapter = true)

@@ -18,6 +18,7 @@ import com.watchlist.anihub.ui.theme.ThemeMode
 import com.watchlist.anihub.ui.theme.TitleLanguage
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -45,58 +46,58 @@ class ThemeManager @Inject constructor(
 
     val themeMode: Flow<ThemeMode> = context.dataStore.data.map { preferences ->
         val mode = preferences[themeModeKey] ?: ThemeMode.SYSTEM.name
-        ThemeMode.valueOf(mode)
-    }
+        runCatching { ThemeMode.valueOf(mode) }.getOrDefault(ThemeMode.SYSTEM)
+    }.distinctUntilChanged()
 
     val colorPalette: Flow<ColorPalette> = context.dataStore.data.map { preferences ->
         val palette = preferences[colorPaletteKey] ?: ColorPalette.DYNAMIC.name
-        ColorPalette.valueOf(palette)
-    }
+        runCatching { ColorPalette.valueOf(palette) }.getOrDefault(ColorPalette.DYNAMIC)
+    }.distinctUntilChanged()
 
     val titleLanguage: Flow<TitleLanguage> = context.dataStore.data.map { preferences ->
         val language = preferences[titleLanguageKey] ?: TitleLanguage.ROMAJI.name
-        TitleLanguage.valueOf(language)
-    }
+        runCatching { TitleLanguage.valueOf(language) }.getOrDefault(TitleLanguage.ROMAJI)
+    }.distinctUntilChanged()
 
     val staffLanguage: Flow<StaffNameLanguage> = context.dataStore.data.map { preferences ->
         val language = preferences[staffLanguageKey] ?: StaffNameLanguage.ROMAJI_WESTERN.name
-        StaffNameLanguage.valueOf(language)
-    }
+        runCatching { StaffNameLanguage.valueOf(language) }.getOrDefault(StaffNameLanguage.ROMAJI_WESTERN)
+    }.distinctUntilChanged()
 
     val scoreFormat: Flow<ScoreFormat> = context.dataStore.data.map { preferences ->
         val format = preferences[scoreFormatKey] ?: ScoreFormat.POINT_10.name
-        ScoreFormat.valueOf(format)
-    }
+        runCatching { ScoreFormat.valueOf(format) }.getOrDefault(ScoreFormat.POINT_10)
+    }.distinctUntilChanged()
 
     val airingFormat: Flow<AiringFormat> = context.dataStore.data.map { preferences ->
         val format = preferences[airingFormatKey] ?: AiringFormat.COUNTDOWN.name
-        AiringFormat.valueOf(format)
-    }
+        runCatching { AiringFormat.valueOf(format) }.getOrDefault(AiringFormat.COUNTDOWN)
+    }.distinctUntilChanged()
 
     val adultContent: Flow<Boolean> = context.dataStore.data.map { preferences ->
         preferences[adultContentKey] ?: false
-    }
+    }.distinctUntilChanged()
 
     val showAiringCountdown: Flow<Boolean> = context.dataStore.data.map { preferences ->
         preferences[showAiringCountdownKey] ?: true
-    }
+    }.distinctUntilChanged()
 
     val notificationsEnabled: Flow<Boolean> = context.dataStore.data.map { preferences ->
         preferences[notificationsKey] ?: true
-    }
+    }.distinctUntilChanged()
 
     val watchlistFilterStatus: Flow<WatchlistStatus?> = context.dataStore.data.map { preferences ->
-        preferences[watchlistFilterKey]?.let { WatchlistStatus.valueOf(it) }
-    }
+        preferences[watchlistFilterKey]?.let { runCatching { WatchlistStatus.valueOf(it) }.getOrNull() }
+    }.distinctUntilChanged()
 
     val watchlistSortOrder: Flow<WatchlistSort> = context.dataStore.data.map { preferences ->
         val sort = preferences[watchlistSortKey] ?: WatchlistSort.LAST_ADDED.name
-        WatchlistSort.valueOf(sort)
-    }
+        runCatching { WatchlistSort.valueOf(sort) }.getOrDefault(WatchlistSort.LAST_ADDED)
+    }.distinctUntilChanged()
 
     val watchlistItemsPerRow: Flow<Int> = context.dataStore.data.map { preferences ->
         preferences[watchlistItemsPerRowKey] ?: 2
-    }
+    }.distinctUntilChanged()
 
     suspend fun setThemeMode(mode: ThemeMode) {
         context.dataStore.edit { preferences ->

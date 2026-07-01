@@ -4,10 +4,10 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.watchlist.anihub.data.ThemeManager
 import com.watchlist.anihub.data.remote.*
+import com.watchlist.anihub.ui.UiState
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -17,8 +17,11 @@ class SearchViewModel @Inject constructor(
     private val themeManager: ThemeManager
 ) : ViewModel() {
 
-    private val _searchResults = MutableStateFlow<List<Media>>(emptyList())
+    private val _searchResults = MutableStateFlow<UiState<List<Media>>>(UiState.Success(emptyList()))
     val searchResults = _searchResults.asStateFlow()
+
+    private val _searchQuery = MutableStateFlow("")
+    val searchQuery = _searchQuery.asStateFlow()
 
     private val _genres = MutableStateFlow<List<String>>(emptyList())
     val genres = _genres.asStateFlow()
@@ -38,18 +41,27 @@ class SearchViewModel @Inject constructor(
     private val _selectedSort = MutableStateFlow("POPULARITY_DESC")
     val selectedSort = _selectedSort.asStateFlow()
 
-    private var currentQuery = ""
+    private var searchJob: Job? = null
 
     init {
         fetchGenres()
     }
+
+    private data class SearchParameters(
+        val query: String,
+        val genre: String?,
+        val year: Int?,
+        val season: String?,
+        val status: String?,
+        val sort: String
+    )
 
     private fun fetchGenres() {
         viewModelScope.launch {
             try {
                 val query = "{ GenreCollection }"
                 val response = aniListService.getGenres(GraphQLRequest(query))
-                _genres.value = response.data.genreCollection
+                _genres.value = response.data?.genreCollection ?: emptyList()
             } catch (e: Exception) {
                 e.printStackTrace()
             }
@@ -58,49 +70,69 @@ class SearchViewModel @Inject constructor(
 
     fun selectGenre(genre: String?) {
         _selectedGenre.value = genre
-        searchAnime(currentQuery)
+        performSearch()
     }
 
     fun selectYear(year: Int?) {
         _selectedYear.value = year
-        searchAnime(currentQuery)
+        performSearch()
     }
 
     fun selectSeason(season: String?) {
         _selectedSeason.value = season
-        searchAnime(currentQuery)
+        performSearch()
     }
 
     fun selectStatus(status: String?) {
         _selectedStatus.value = status
-        searchAnime(currentQuery)
+        performSearch()
     }
 
     fun selectSort(sort: String) {
         _selectedSort.value = sort
-        searchAnime(currentQuery)
+        performSearch()
     }
 
-    fun searchAnime(query: String) {
-        currentQuery = query
-        if (query.isBlank() && _selectedGenre.value == null && _selectedYear.value == null && _selectedSeason.value == null && _selectedStatus.value == null) {
-            _searchResults.value = emptyList()
+    fun onQueryChange(query: String) {
+        _searchQuery.value = query
+    }
+
+    fun onSearchExplicit(query: String) {
+        _searchQuery.value = query
+        performSearch()
+    }
+
+    private fun performSearch() {
+        val params = SearchParameters(
+            _searchQuery.value,
+            _selectedGenre.value,
+            _selectedYear.value,
+            _selectedSeason.value,
+            _selectedStatus.value,
+            _selectedSort.value
+        )
+
+        if (params.query.isBlank() && params.genre == null && params.year == null && params.season == null && params.status == null) {
+            _searchResults.value = UiState.Success(emptyList())
             return
         }
-        viewModelScope.launch {
+
+        searchJob?.cancel()
+        searchJob = viewModelScope.launch {
+            _searchResults.value = UiState.Loading
             try {
                 val isAdult = themeManager.adultContent.first()
                 val variables = mutableMapOf<String, Any>(
                     "isAdult" to isAdult,
-                    "sort" to listOf(_selectedSort.value)
+                    "sort" to listOf(params.sort)
                 )
-                if (query.isNotBlank()) {
-                    variables["search"] = query
+                if (params.query.isNotBlank()) {
+                    variables["search"] = params.query
                 }
-                _selectedGenre.value?.let { variables["genre"] = it }
-                _selectedYear.value?.let { variables["seasonYear"] = it }
-                _selectedSeason.value?.let { variables["season"] = it }
-                _selectedStatus.value?.let { variables["status"] = it }
+                params.genre?.let { variables["genre"] = it }
+                params.year?.let { variables["seasonYear"] = it }
+                params.season?.let { variables["season"] = it }
+                params.status?.let { variables["status"] = it }
 
                 val searchQuery = """
                     query (${'$'}search: String, ${'$'}isAdult: Boolean, ${'$'}genre: String, ${'$'}season: MediaSeason, ${'$'}seasonYear: Int, ${'$'}status: MediaStatus, ${'$'}sort: [MediaSort]) {
@@ -113,11 +145,20 @@ class SearchViewModel @Inject constructor(
                       }
                     }
                 """
-                _searchResults.value = aniListService.getAnimeList(
+                val response = aniListService.getAnimeList(
                     GraphQLRequest(searchQuery, variables)
-                ).data.page.media ?: emptyList()
+                )
+                
+                if (response.errors != null) {
+                    throw Exception(response.errors.firstOrNull()?.message ?: "Unknown error")
+                }
+                
+                val mediaList = response.data?.page?.media ?: emptyList()
+                _searchResults.value = UiState.Success(mediaList)
             } catch (e: Exception) {
-                e.printStackTrace()
+                if (e !is kotlinx.coroutines.CancellationException) {
+                    _searchResults.value = UiState.Error(NetworkUtils.getErrorMessage(e))
+                }
             }
         }
     }

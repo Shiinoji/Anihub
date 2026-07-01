@@ -8,9 +8,9 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
+import androidx.compose.animation.*
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -113,56 +113,93 @@ fun MainContent(themeViewModel: ThemeViewModel, startScreen: Screen = Screen.Hom
             }
         },
         contentWindowInsets = WindowInsets(0.dp, 0.dp, 0.dp, 0.dp)
-    )
-{ padding ->
+    ) { padding ->
         Surface(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding),
             color = MaterialTheme.colorScheme.background
         ) {
-            when (val screen = currentScreen) {
-                Screen.Home -> HomeScreen(
-                    onAnimeClick = { navigateTo(Screen.AnimeDetail(it)) },
-                    onNotificationsClick = { navigateTo(Screen.Notifications) },
-                    onCalendarClick = { navigateTo(Screen.Calendar) },
-                    onSettingsClick = { navigateTo(Screen.Settings) }
-                )
-                Screen.Search -> SearchScreen(
-                    onAnimeClick = { navigateTo(Screen.AnimeDetail(it)) }
-                )
-                Screen.Watchlist -> WatchlistScreen(
-                    onBackClick = { navigateBack() },
-                    onAnimeClick = { navigateTo(Screen.AnimeDetail(it)) }
-                )
-                Screen.Settings -> SettingsScreen(
-                    onBackClick = { navigateBack() },
-                    onHistoryClick = { navigateTo(Screen.History) },
-                    viewModel = themeViewModel
-                )
-                Screen.History -> HistoryScreen(
-                    onBackClick = { navigateBack() },
-                    onAnimeClick = { navigateTo(Screen.AnimeDetail(it)) }
-                )
-                Screen.Notifications -> NotificationScreen(
-                    onBackClick = { navigateBack() },
-                    onAnimeClick = { navigateTo(Screen.AnimeDetail(it)) }
-                )
-                Screen.Calendar -> CalendarScreen(
-                    onBackClick = { navigateBack() },
-                    onAnimeClick = { navigateTo(Screen.AnimeDetail(it)) }
-                )
-                is Screen.AnimeDetail -> AnimeDetailScreen(
-                    animeId = screen.id,
-                    onBackClick = { navigateBack() },
-                    onAnimeClick = { navigateTo(Screen.AnimeDetail(it)) },
-                    onCharacterClick = { navigateTo(Screen.CharacterDetail(it)) }
-                )
-                is Screen.CharacterDetail -> CharacterDetailScreen(
-                    characterId = screen.id,
-                    onBackClick = { navigateBack() },
-                    onAnimeClick = { navigateTo(Screen.AnimeDetail(it)) }
-                )
+            AnimatedContent(
+                targetState = currentScreen,
+                transitionSpec = {
+                    val from = initialState
+                    val to = targetState
+                    
+                    val fromIndex = when(from) {
+                        Screen.Home -> 0
+                        Screen.Search -> 1
+                        Screen.Watchlist -> 2
+                        else -> -1
+                    }
+                    val toIndex = when(to) {
+                        Screen.Home -> 0
+                        Screen.Search -> 1
+                        Screen.Watchlist -> 2
+                        else -> -1
+                    }
+
+                    if (fromIndex != -1 && toIndex != -1) {
+                        if (toIndex > fromIndex) {
+                            // Slide left (Right to Left)
+                            (slideInHorizontally { it } + fadeIn())
+                                .togetherWith(slideOutHorizontally { -it } + fadeOut())
+                        } else {
+                            // Slide right (Left to Right)
+                            (slideInHorizontally { -it } + fadeIn())
+                                .togetherWith(slideOutHorizontally { it } + fadeOut())
+                        }
+                    } else {
+                        // Default fade for other screens
+                        fadeIn(tween(300))
+                            .togetherWith(fadeOut(tween(300)))
+                    }
+                },
+                label = "ScreenTransition"
+            ) { screen ->
+                when (screen) {
+                    Screen.Home -> HomeScreen(
+                        onAnimeClick = { navigateTo(Screen.AnimeDetail(it)) },
+                        onNotificationsClick = { navigateTo(Screen.Notifications) },
+                        onCalendarClick = { navigateTo(Screen.Calendar) },
+                        onSettingsClick = { navigateTo(Screen.Settings) }
+                    )
+                    Screen.Search -> SearchScreen(
+                        onAnimeClick = { navigateTo(Screen.AnimeDetail(it)) }
+                    )
+                    Screen.Watchlist -> WatchlistScreen(
+                        onBackClick = { navigateBack() },
+                        onAnimeClick = { navigateTo(Screen.AnimeDetail(it)) }
+                    )
+                    Screen.Settings -> SettingsScreen(
+                        onBackClick = { navigateBack() },
+                        onHistoryClick = { navigateTo(Screen.History) },
+                        viewModel = themeViewModel
+                    )
+                    Screen.History -> HistoryScreen(
+                        onBackClick = { navigateBack() },
+                        onAnimeClick = { navigateTo(Screen.AnimeDetail(it)) }
+                    )
+                    Screen.Notifications -> NotificationScreen(
+                        onBackClick = { navigateBack() },
+                        onAnimeClick = { navigateTo(Screen.AnimeDetail(it)) }
+                    )
+                    Screen.Calendar -> CalendarScreen(
+                        onBackClick = { navigateBack() },
+                        onAnimeClick = { navigateTo(Screen.AnimeDetail(it)) }
+                    )
+                    is Screen.AnimeDetail -> AnimeDetailScreen(
+                        animeId = screen.id,
+                        onBackClick = { navigateBack() },
+                        onAnimeClick = { navigateTo(Screen.AnimeDetail(it)) },
+                        onCharacterClick = { navigateTo(Screen.CharacterDetail(it)) }
+                    )
+                    is Screen.CharacterDetail -> CharacterDetailScreen(
+                        characterId = screen.id,
+                        onBackClick = { navigateBack() },
+                        onAnimeClick = { navigateTo(Screen.AnimeDetail(it)) }
+                    )
+                }
             }
         }
     }
@@ -174,8 +211,10 @@ fun BottomNavigationBar(
     onNavigate: (Screen) -> Unit
 ) {
     NavigationBar(
+        modifier = Modifier.height(62.dp),
         containerColor = MaterialTheme.colorScheme.surface,
-        tonalElevation = 0.dp
+        tonalElevation = 0.dp,
+        windowInsets = WindowInsets(0, 0, 0, 0)
     ) {
         val items = listOf(
             BottomNavItem("Home", Screen.Home, ImageVector.vectorResource(id = R.drawable.house)),
@@ -188,22 +227,26 @@ fun BottomNavigationBar(
             NavigationBarItem(
                 selected = isSelected,
                 onClick = { onNavigate(item.screen) },
+                modifier = Modifier.offset(y = (-5).dp),
                 icon = { 
                     Icon(
                         imageVector = item.icon, 
                         contentDescription = item.title,
-                        tint = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                        tint = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(24.dp)
                     ) 
                 },
                 label = { 
                     Text(
                         text = item.title,
+                        style = MaterialTheme.typography.labelSmall,
                         color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                     ) 
                 },
                 colors = NavigationBarItemDefaults.colors(
-                    indicatorColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.2f)
-                )
+                    indicatorColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.15f)
+                ),
+                alwaysShowLabel = true
             )
         }
     }

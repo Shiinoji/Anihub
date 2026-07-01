@@ -8,8 +8,6 @@ import com.watchlist.anihub.ui.UiState
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.*
-import java.io.IOException
-import java.net.UnknownHostException
 import javax.inject.Inject
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -34,7 +32,11 @@ class HomeViewModel @Inject constructor(
             emit(UiState.Loading)
             try {
                 val res = aniListService.getAnimeList(GraphQLRequest(AniListQueries.TRENDING_NOW, mapOf("page" to 1, "perPage" to 10, "isAdult" to isAdult)))
-                emit(UiState.Success(res.data.page.media ?: emptyList()))
+                if (res.errors != null) {
+                    emit(UiState.Error(res.errors.firstOrNull()?.message ?: "Unknown error"))
+                } else {
+                    emit(UiState.Success(res.data?.page?.media ?: emptyList()))
+                }
             } catch (e: Exception) {
                 emit(UiState.Error(getErrorMessage(e)))
             } finally {
@@ -48,7 +50,11 @@ class HomeViewModel @Inject constructor(
             emit(UiState.Loading)
             try {
                 val res = aniListService.getAnimeList(GraphQLRequest(AniListQueries.MOST_POPULAR, mapOf("page" to 1, "perPage" to 10, "isAdult" to isAdult)))
-                emit(UiState.Success(res.data.page.media ?: emptyList()))
+                if (res.errors != null) {
+                    emit(UiState.Error(res.errors.firstOrNull()?.message ?: "Unknown error"))
+                } else {
+                    emit(UiState.Success(res.data?.page?.media ?: emptyList()))
+                }
             } catch (e: Exception) {
                 emit(UiState.Error(getErrorMessage(e)))
             }
@@ -60,7 +66,11 @@ class HomeViewModel @Inject constructor(
             emit(UiState.Loading)
             try {
                 val res = aniListService.getAnimeList(GraphQLRequest(AniListQueries.SEASONAL_ANIME, mapOf("page" to 1, "perPage" to 10, "season" to "SPRING", "seasonYear" to 2024, "isAdult" to isAdult)))
-                emit(UiState.Success(res.data.page.media ?: emptyList()))
+                if (res.errors != null) {
+                    emit(UiState.Error(res.errors.firstOrNull()?.message ?: "Unknown error"))
+                } else {
+                    emit(UiState.Success(res.data?.page?.media ?: emptyList()))
+                }
             } catch (e: Exception) {
                 emit(UiState.Error(getErrorMessage(e)))
             }
@@ -72,7 +82,11 @@ class HomeViewModel @Inject constructor(
             emit(UiState.Loading)
             try {
                 val res = aniListService.getAnimeList(GraphQLRequest(AniListQueries.TOP_RATED, mapOf("page" to 1, "perPage" to 10, "isAdult" to isAdult)))
-                emit(UiState.Success(res.data.page.media ?: emptyList()))
+                if (res.errors != null) {
+                    emit(UiState.Error(res.errors.firstOrNull()?.message ?: "Unknown error"))
+                } else {
+                    emit(UiState.Success(res.data?.page?.media ?: emptyList()))
+                }
             } catch (e: Exception) {
                 emit(UiState.Error(getErrorMessage(e)))
             }
@@ -84,7 +98,11 @@ class HomeViewModel @Inject constructor(
             emit(UiState.Loading)
             try {
                 val res = aniListService.getAnimeList(GraphQLRequest(AniListQueries.ALL_TIME_POPULAR, mapOf("page" to 1, "perPage" to 10, "isAdult" to isAdult)))
-                emit(UiState.Success(res.data.page.media ?: emptyList()))
+                if (res.errors != null) {
+                    emit(UiState.Error(res.errors.firstOrNull()?.message ?: "Unknown error"))
+                } else {
+                    emit(UiState.Success(res.data?.page?.media ?: emptyList()))
+                }
             } catch (e: Exception) {
                 emit(UiState.Error(getErrorMessage(e)))
             }
@@ -96,10 +114,5 @@ class HomeViewModel @Inject constructor(
         _refreshTrigger.value += 1
     }
 
-    private fun getErrorMessage(e: Exception): String {
-        return when (e) {
-            is UnknownHostException, is IOException -> "No internet connection. Please check your network."
-            else -> "Something went wrong. Please try again later."
-        }
-    }
+    private fun getErrorMessage(e: Exception): String = NetworkUtils.getErrorMessage(e)
 }

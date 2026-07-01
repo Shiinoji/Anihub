@@ -45,7 +45,7 @@ class NotificationHelper @Inject constructor(
         )
 
         val builder = NotificationCompat.Builder(context, channelId)
-            .setSmallIcon(R.drawable.bell)
+            .setSmallIcon(R.drawable.anihub)
             .setContentTitle("New Episode: $animeTitle")
             .setContentText("Episode $episodeNumber is now available!")
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
@@ -55,6 +55,32 @@ class NotificationHelper @Inject constructor(
         with(NotificationManagerCompat.from(context)) {
             try {
                 notify(animeId, builder.build())
+            } catch (e: SecurityException) {
+                e.printStackTrace()
+            }
+        }
+    }
+
+    fun showNewAnimeNotification(animeTitle: String, animeId: Int) {
+        val intent = Intent(context, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+            putExtra("animeId", animeId)
+        }
+        val pendingIntent: PendingIntent = PendingIntent.getActivity(
+            context, animeId + 1000000, intent, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+        )
+
+        val builder = NotificationCompat.Builder(context, channelId)
+            .setSmallIcon(R.drawable.anihub)
+            .setContentTitle("New Trending Anime")
+            .setContentText("$animeTitle is trending now. Check it out!")
+            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+            .setContentIntent(pendingIntent)
+            .setAutoCancel(true)
+
+        with(NotificationManagerCompat.from(context)) {
+            try {
+                notify(animeId + 1000000, builder.build())
             } catch (e: SecurityException) {
                 e.printStackTrace()
             }
