@@ -66,7 +66,7 @@ object NetworkModule {
     @Singleton
     fun provideGitHubReleaseApi(okHttpClient: OkHttpClient, moshi: Moshi): GitHubReleaseApi {
         return Retrofit.Builder()
-            .baseUrl("https://api.github.com/repos/Shiinoji/Anihub/releases/")
+            .baseUrl("https://api.github.com/")
             .client(okHttpClient)
             .addConverterFactory(MoshiConverterFactory.create(moshi))
             .build()
