@@ -25,10 +25,15 @@ import javax.inject.Singleton
 
 private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "settings")
 
+/**
+ * Manages user preferences and theme settings using Jetpack DataStore.
+ * Provides observable [Flow]s for all settings.
+ */
 @Singleton
 class ThemeManager @Inject constructor(
     @param:ApplicationContext private val context: Context,
 ) {
+    // Preference Keys
     private val themeModeKey = stringPreferencesKey("theme_mode")
     private val colorPaletteKey = stringPreferencesKey("color_palette")
     private val titleLanguageKey = stringPreferencesKey("title_language")
@@ -39,66 +44,111 @@ class ThemeManager @Inject constructor(
     private val showAiringCountdownKey = booleanPreferencesKey("show_airing_countdown")
     private val notificationsKey = booleanPreferencesKey("notifications_enabled")
 
-    // Watchlist Personalization
+    // Layout & Filtering Keys
     private val watchlistFilterKey = stringPreferencesKey("watchlist_filter")
     private val watchlistSortKey = stringPreferencesKey("watchlist_sort")
     private val watchlistItemsPerRowKey = intPreferencesKey("watchlist_items_per_row")
+    private val homeItemsPerRowKey = intPreferencesKey("home_items_per_row")
 
+    /**
+     * Current [ThemeMode] (SYSTEM, LIGHT, DARK, AMOLED).
+     */
     val themeMode: Flow<ThemeMode> = context.dataStore.data.map { preferences ->
         val mode = preferences[themeModeKey] ?: ThemeMode.SYSTEM.name
         runCatching { ThemeMode.valueOf(mode) }.getOrDefault(ThemeMode.SYSTEM)
     }.distinctUntilChanged()
 
+    /**
+     * Selected [ColorPalette] for the app's UI.
+     */
     val colorPalette: Flow<ColorPalette> = context.dataStore.data.map { preferences ->
         val palette = preferences[colorPaletteKey] ?: ColorPalette.DYNAMIC.name
         runCatching { ColorPalette.valueOf(palette) }.getOrDefault(ColorPalette.DYNAMIC)
     }.distinctUntilChanged()
 
+    /**
+     * Preferred language for anime titles.
+     */
     val titleLanguage: Flow<TitleLanguage> = context.dataStore.data.map { preferences ->
         val language = preferences[titleLanguageKey] ?: TitleLanguage.ROMAJI.name
         runCatching { TitleLanguage.valueOf(language) }.getOrDefault(TitleLanguage.ROMAJI)
     }.distinctUntilChanged()
 
+    /**
+     * Preferred language for staff names.
+     */
     val staffLanguage: Flow<StaffNameLanguage> = context.dataStore.data.map { preferences ->
         val language = preferences[staffLanguageKey] ?: StaffNameLanguage.ROMAJI_WESTERN.name
         runCatching { StaffNameLanguage.valueOf(language) }.getOrDefault(StaffNameLanguage.ROMAJI_WESTERN)
     }.distinctUntilChanged()
 
+    /**
+     * Format for displaying scores.
+     */
     val scoreFormat: Flow<ScoreFormat> = context.dataStore.data.map { preferences ->
         val format = preferences[scoreFormatKey] ?: ScoreFormat.POINT_10.name
         runCatching { ScoreFormat.valueOf(format) }.getOrDefault(ScoreFormat.POINT_10)
     }.distinctUntilChanged()
 
+    /**
+     * Format for displaying airing times.
+     */
     val airingFormat: Flow<AiringFormat> = context.dataStore.data.map { preferences ->
         val format = preferences[airingFormatKey] ?: AiringFormat.COUNTDOWN.name
         runCatching { AiringFormat.valueOf(format) }.getOrDefault(AiringFormat.COUNTDOWN)
     }.distinctUntilChanged()
 
+    /**
+     * Whether to include adult (R18+) content in results.
+     */
     val adultContent: Flow<Boolean> = context.dataStore.data.map { preferences ->
         preferences[adultContentKey] ?: false
     }.distinctUntilChanged()
 
+    /**
+     * Whether to show a countdown timer for next episodes.
+     */
     val showAiringCountdown: Flow<Boolean> = context.dataStore.data.map { preferences ->
         preferences[showAiringCountdownKey] ?: true
     }.distinctUntilChanged()
 
+    /**
+     * Whether airing notifications are enabled.
+     */
     val notificationsEnabled: Flow<Boolean> = context.dataStore.data.map { preferences ->
         preferences[notificationsKey] ?: true
     }.distinctUntilChanged()
 
+    /**
+     * Current status filter for the watchlist.
+     */
     val watchlistFilterStatus: Flow<WatchlistStatus?> = context.dataStore.data.map { preferences ->
         preferences[watchlistFilterKey]?.let { runCatching { WatchlistStatus.valueOf(it) }.getOrNull() }
     }.distinctUntilChanged()
 
+    /**
+     * Current sort order for the watchlist.
+     */
     val watchlistSortOrder: Flow<WatchlistSort> = context.dataStore.data.map { preferences ->
         val sort = preferences[watchlistSortKey] ?: WatchlistSort.LAST_ADDED.name
         runCatching { WatchlistSort.valueOf(sort) }.getOrDefault(WatchlistSort.LAST_ADDED)
     }.distinctUntilChanged()
 
+    /**
+     * Number of items per row in the watchlist grid.
+     */
     val watchlistItemsPerRow: Flow<Int> = context.dataStore.data.map { preferences ->
         preferences[watchlistItemsPerRowKey] ?: 2
     }.distinctUntilChanged()
 
+    /**
+     * Number of items per row in the home discover grid.
+     */
+    val homeItemsPerRow: Flow<Int> = context.dataStore.data.map { preferences ->
+        preferences[homeItemsPerRowKey] ?: 2
+    }.distinctUntilChanged()
+
+    // Update methods
     suspend fun setThemeMode(mode: ThemeMode) {
         context.dataStore.edit { preferences ->
             preferences[themeModeKey] = mode.name
@@ -172,6 +222,12 @@ class ThemeManager @Inject constructor(
     suspend fun setWatchlistItemsPerRow(count: Int) {
         context.dataStore.edit { preferences ->
             preferences[watchlistItemsPerRowKey] = count
+        }
+    }
+
+    suspend fun setHomeItemsPerRow(count: Int) {
+        context.dataStore.edit { preferences ->
+            preferences[homeItemsPerRowKey] = count
         }
     }
 }

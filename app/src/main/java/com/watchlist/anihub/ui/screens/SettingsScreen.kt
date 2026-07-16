@@ -1,41 +1,55 @@
 package com.watchlist.anihub.ui.screens
 
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.horizontalScroll
+import android.content.Context
+import android.content.Intent
+import android.net.Uri
+import android.os.Build
+import android.os.PowerManager
+import android.provider.Settings
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.*
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.foundation.*
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.selection.selectable
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Palette
-import androidx.compose.material.icons.filled.RestartAlt
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.watchlist.anihub.BuildConfig
 import com.watchlist.anihub.R
 import com.watchlist.anihub.ui.ThemeViewModel
 import com.watchlist.anihub.ui.theme.*
 
+/**
+ * Premium HyperOS-inspired Settings Screen.
+ * Featuring floating cards, minimalist rows, and optimized background performance settings.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
@@ -43,6 +57,7 @@ fun SettingsScreen(
     onHistoryClick: () -> Unit,
     viewModel: ThemeViewModel
 ) {
+    val context = LocalContext.current
     val themeMode by viewModel.themeMode.collectAsState()
     val colorPalette by viewModel.colorPalette.collectAsState()
     val titleLanguage by viewModel.titleLanguage.collectAsState()
@@ -52,12 +67,47 @@ fun SettingsScreen(
     val adultContent by viewModel.adultContent.collectAsState()
     val showAiringCountdown by viewModel.showAiringCountdown.collectAsState()
     val notificationsEnabled by viewModel.notificationsEnabled.collectAsState()
+    val homeItemsPerRow by viewModel.homeItemsPerRow.collectAsState()
+
+    val dataViewModel: DataManagementViewModel = hiltViewModel()
+    val cacheSize by dataViewModel.cacheSize.collectAsState()
+    val importState by dataViewModel.importState.collectAsState()
+    val snackbarMessage by dataViewModel.snackbarMessage.collectAsState()
+
+    val snackbarHostState = remember { SnackbarHostState() }
+    
+    // Check if battery optimization is ignored
+    var isIgnoringBatteryOptimizations by remember {
+        mutableStateOf(checkBatteryOptimization(context))
+    }
+
+    // Update battery status when returning from settings
+    DisposableEffect(Unit) {
+        onDispose { /* Cleanup if needed */ }
+    }
 
     var showTitleDialog by remember { mutableStateOf(false) }
     var showStaffDialog by remember { mutableStateOf(false) }
     var showScoreDialog by remember { mutableStateOf(false) }
     var showAiringDialog by remember { mutableStateOf(false) }
+    var showClearCacheDialog by remember { mutableStateOf(false) }
 
+    val malPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? -> uri?.let { dataViewModel.importMalList(it) } }
+
+    val exportLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CreateDocument("text/xml")
+    ) { uri: Uri? -> uri?.let { dataViewModel.exportWatchlist(it) } }
+
+    LaunchedEffect(snackbarMessage) {
+        snackbarMessage?.let {
+            snackbarHostState.showSnackbar(it)
+            dataViewModel.onSnackbarShown()
+        }
+    }
+
+    // Dialog Rendering
     if (showTitleDialog) {
         EnumSelectionDialog(
             title = "Title Language",
@@ -65,7 +115,7 @@ fun SettingsScreen(
             selected = titleLanguage,
             onSelect = { viewModel.setTitleLanguage(it) },
             onDismiss = { showTitleDialog = false },
-            labelProvider = { it.name.lowercase().replaceFirstChar { c -> c.uppercase() } }
+            labelProvider = { it.name.lowercase().replaceFirstChar { it.uppercase() } }
         )
     }
 
@@ -76,7 +126,7 @@ fun SettingsScreen(
             selected = staffLanguage,
             onSelect = { viewModel.setStaffLanguage(it) },
             onDismiss = { showStaffDialog = false },
-            labelProvider = { it.name.replace("_", " ").lowercase().replaceFirstChar { c -> c.uppercase() } }
+            labelProvider = { it.name.replace("_", " ").lowercase().replaceFirstChar { it.uppercase() } }
         )
     }
 
@@ -87,7 +137,7 @@ fun SettingsScreen(
             selected = scoreFormat,
             onSelect = { viewModel.setScoreFormat(it) },
             onDismiss = { showScoreDialog = false },
-            labelProvider = { it.name.replace("POINT_", "Point ").replace("_", ".").lowercase().replaceFirstChar { c -> c.uppercase() } }
+            labelProvider = { it.name.replace("POINT_", "Point ").replace("_", ".").lowercase().replaceFirstChar { it.uppercase() } }
         )
     }
 
@@ -98,19 +148,47 @@ fun SettingsScreen(
             selected = airingFormat,
             onSelect = { viewModel.setAiringFormat(it) },
             onDismiss = { showAiringDialog = false },
-            labelProvider = { it.name.lowercase().replaceFirstChar { c -> c.uppercase() } }
+            labelProvider = { it.name.lowercase().replaceFirstChar { it.uppercase() } }
         )
     }
 
+    if (showClearCacheDialog) {
+        AlertDialog(
+            onDismissRequest = { showClearCacheDialog = false },
+            title = { Text("Clear Cache") },
+            text = { Text("Are you sure you want to clear the app cache? This will not delete your watchlist or preferences.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    dataViewModel.clearCache()
+                    showClearCacheDialog = false
+                }) { Text("Clear") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showClearCacheDialog = false }) { Text("Cancel") }
+            }
+        )
+    }
+
+    ImportStatusDialogs(importState, dataViewModel)
+
+    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
+
     Scaffold(
+        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
+        snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
         topBar = {
-            TopAppBar(
-                title = { Text("Settings", fontWeight = FontWeight.Bold) },
+            LargeTopAppBar(
+                title = { Text("Settings", fontWeight = FontWeight.ExtraBold) },
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
                         Icon(ImageVector.vectorResource(R.drawable.arrow_left), contentDescription = "Back")
                     }
-                }
+                },
+                scrollBehavior = scrollBehavior,
+                colors = TopAppBarDefaults.largeTopAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.background,
+                    scrolledContainerColor = MaterialTheme.colorScheme.surface
+                )
             )
         }
     ) { padding ->
@@ -119,75 +197,53 @@ fun SettingsScreen(
                 .fillMaxSize()
                 .padding(padding)
                 .verticalScroll(rememberScrollState())
-                .padding(16.dp),
+                .padding(horizontal = 20.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Preview Mockup
-            Box(
-                modifier = Modifier
-                    .width(120.dp)
-                    .height(200.dp)
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(MaterialTheme.colorScheme.surfaceVariant)
-                    .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(12.dp))
-            ) {
-                Column(modifier = Modifier.padding(8.dp)) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Box(modifier = Modifier.size(8.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primary))
-                        Box(modifier = Modifier.size(8.dp).clip(CircleShape).background(MaterialTheme.colorScheme.secondary))
-                    }
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Box(modifier = Modifier.fillMaxWidth().height(40.dp).clip(RoundedCornerShape(4.dp)).background(MaterialTheme.colorScheme.primary))
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Box(modifier = Modifier.weight(1f).height(40.dp).clip(RoundedCornerShape(4.dp)).background(MaterialTheme.colorScheme.secondary))
-                        Box(modifier = Modifier.weight(1f).height(40.dp).clip(RoundedCornerShape(4.dp)).background(MaterialTheme.colorScheme.tertiary))
-                    }
-                    Spacer(modifier = Modifier.weight(1f))
-                    Box(modifier = Modifier.align(Alignment.End).size(12.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primaryContainer))
-                }
-            }
+            Spacer(modifier = Modifier.height(24.dp))
 
-            Spacer(modifier = Modifier.height(32.dp))
-
-            // Appearance Card
-            SettingsSection(title = "Appearance") {
-                Text("Theme Mode", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
-                Spacer(modifier = Modifier.height(12.dp))
+            // SECTION: INTERFACE
+            SettingsCard(title = "Interface") {
+                SettingsSubHeader(title = "Appearance")
+                
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    ThemeOption(
+                    ThemePreviewCard(
+                        label = "System",
                         selected = themeMode == ThemeMode.SYSTEM,
                         onClick = { viewModel.setThemeMode(ThemeMode.SYSTEM) },
-                        icon = { Icon(Icons.Default.RestartAlt, contentDescription = null) }
+                        surfaceColor = MaterialTheme.colorScheme.surfaceVariant,
+                        accentColor = AniListBlue,
+                        icon = Icons.Default.RestartAlt
                     )
-                    Box(modifier = Modifier.width(1.dp).height(24.dp).background(MaterialTheme.colorScheme.outlineVariant))
-                    ThemeOption(
+                    ThemePreviewCard(
+                        label = "Light",
                         selected = themeMode == ThemeMode.LIGHT,
                         onClick = { viewModel.setThemeMode(ThemeMode.LIGHT) },
-                        color = Color.White
+                        surfaceColor = Color.White,
+                        accentColor = AniListBlue
                     )
-                    ThemeOption(
+                    ThemePreviewCard(
+                        label = "Dark",
                         selected = themeMode == ThemeMode.DARK,
                         onClick = { viewModel.setThemeMode(ThemeMode.DARK) },
-                        color = Color(0xFF211F1F)
+                        surfaceColor = Color(0xFF1A1C1E),
+                        accentColor = AniListBlue
                     )
-                    ThemeOption(
+                    ThemePreviewCard(
+                        label = "AMOLED",
                         selected = themeMode == ThemeMode.AMOLED,
                         onClick = { viewModel.setThemeMode(ThemeMode.AMOLED) },
-                        color = Color.Black
+                        surfaceColor = Color.Black,
+                        accentColor = AniListBlue
                     )
                 }
 
                 Spacer(modifier = Modifier.height(24.dp))
 
-                Text("Color Palette", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+                Text("Color Palette", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Spacer(modifier = Modifier.height(12.dp))
                 Row(
                     modifier = Modifier
@@ -195,384 +251,406 @@ fun SettingsScreen(
                         .horizontalScroll(rememberScrollState()),
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    PaletteOption(
+                    PalettePreviewCard(
                         selected = colorPalette == ColorPalette.DYNAMIC,
                         onClick = { viewModel.setColorPalette(ColorPalette.DYNAMIC) },
-                        icon = { Icon(Icons.Default.Palette, contentDescription = null) }
+                        accentColor = AniListBlue,
+                        label = "Dynamic"
                     )
-                    PaletteOption(
-                        selected = colorPalette == ColorPalette.BROWN,
-                        onClick = { viewModel.setColorPalette(ColorPalette.BROWN) },
-                        colorTop = Color.White,
-                        colorBottom = BrownPrimary
-                    )
-                    PaletteOption(
-                        selected = colorPalette == ColorPalette.DEEP_BROWN,
-                        onClick = { viewModel.setColorPalette(ColorPalette.DEEP_BROWN) },
-                        colorTop = Color.White,
-                        colorBottom = DeepBrownPrimary
-                    )
-                    PaletteOption(
-                        selected = colorPalette == ColorPalette.PURPLE,
-                        onClick = { viewModel.setColorPalette(ColorPalette.PURPLE) },
-                        colorTop = Color.White,
-                        colorBottom = PurplePrimary
-                    )
-                    PaletteOption(
-                        selected = colorPalette == ColorPalette.DEEP_PURPLE,
-                        onClick = { viewModel.setColorPalette(ColorPalette.DEEP_PURPLE) },
-                        colorTop = Color.White,
-                        colorBottom = DeepPurplePrimary
-                    )
-                    PaletteOption(
-                        selected = colorPalette == ColorPalette.OCEAN,
-                        onClick = { viewModel.setColorPalette(ColorPalette.OCEAN) },
-                        colorTop = Color.White,
-                        colorBottom = OceanPrimary
-                    )
-                    PaletteOption(
-                        selected = colorPalette == ColorPalette.FOREST,
-                        onClick = { viewModel.setColorPalette(ColorPalette.FOREST) },
-                        colorTop = Color.White,
-                        colorBottom = ForestPrimary
-                    )
-                    PaletteOption(
-                        selected = colorPalette == ColorPalette.CHERRY,
-                        onClick = { viewModel.setColorPalette(ColorPalette.CHERRY) },
-                        colorTop = Color.White,
-                        colorBottom = CherryPrimary
-                    )
-                    PaletteOption(
-                        selected = colorPalette == ColorPalette.SUNSET,
-                        onClick = { viewModel.setColorPalette(ColorPalette.SUNSET) },
-                        colorTop = Color.White,
-                        colorBottom = SunsetPrimary
-                    )
-                    PaletteOption(
-                        selected = colorPalette == ColorPalette.LAVENDER,
-                        onClick = { viewModel.setColorPalette(ColorPalette.LAVENDER) },
-                        colorTop = Color.White,
-                        colorBottom = LavenderPrimary
-                    )
-                    PaletteOption(
-                        selected = colorPalette == ColorPalette.MINT,
-                        onClick = { viewModel.setColorPalette(ColorPalette.MINT) },
-                        colorTop = Color.White,
-                        colorBottom = MintPrimary
-                    )
-                    PaletteOption(
-                        selected = colorPalette == ColorPalette.GOLD,
-                        onClick = { viewModel.setColorPalette(ColorPalette.GOLD) },
-                        colorTop = Color.White,
-                        colorBottom = GoldPrimary
-                    )
+                    ColorPalette.entries.filter { it != ColorPalette.DYNAMIC }.forEach { palette ->
+                        val (_, accent) = getPaletteColors(palette)
+                        PalettePreviewCard(
+                            selected = colorPalette == palette,
+                            onClick = { viewModel.setColorPalette(palette) },
+                            accentColor = accent,
+                            label = palette.name.lowercase().replaceFirstChar { it.uppercase() }
+                        )
+                    }
                 }
-            }
 
-            Spacer(modifier = Modifier.height(16.dp))
+                HorizontalDivider(modifier = Modifier.padding(vertical = 24.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
 
-            // AniList Sync Settings
-            SettingsSection(title = "Anime Discovery") {
-                SettingsClickableRow(
-                    label = "History",
-                    description = "View your recently watched anime",
-                    icon = ImageVector.vectorResource(R.drawable.history),
-                    onClick = onHistoryClick
-                )
-
-                HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), color = MaterialTheme.colorScheme.outlineVariant)
-
-                SettingsClickableRow(
-                    label = "Title Language",
-                    value = titleLanguage.name.lowercase().replaceFirstChar { it.uppercase() },
-                    onClick = { showTitleDialog = true }
-                )
-
-                SettingsClickableRow(
-                    label = "Staff Name Language",
-                    value = staffLanguage.name.replace("_", " ").lowercase().replaceFirstChar { it.uppercase() },
-                    onClick = { showStaffDialog = true }
-                )
-
-                SettingsClickableRow(
-                    label = "Score Format",
-                    value = scoreFormat.name.replace("POINT_", "Point ").replace("_", ".").lowercase().replaceFirstChar { it.uppercase() },
-                    onClick = { showScoreDialog = true }
-                )
-
-                SettingsClickableRow(
-                    label = "Airing Format",
-                    value = airingFormat.name.lowercase().replaceFirstChar { it.uppercase() },
-                    onClick = { showAiringDialog = true }
-                )
-
-                HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp), color = MaterialTheme.colorScheme.outlineVariant)
-
-                SettingsSwitch(
-                    label = "Adult Content",
-                    description = "Show R18+ media in search and lists",
-                    checked = adultContent,
-                    onCheckedChange = { viewModel.setAdultContent(it) }
-                )
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                SettingsSwitch(
-                    label = "Airing Countdown",
-                    description = "Show countdown for next episode",
-                    checked = showAiringCountdown,
-                    onCheckedChange = { viewModel.setShowAiringCountdown(it) }
-                )
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                SettingsSwitch(
-                    label = "Notifications",
-                    description = "Enable push notifications for airings",
-                    checked = notificationsEnabled,
-                    onCheckedChange = { viewModel.setNotificationsEnabled(it) },
-                    icon = ImageVector.vectorResource(R.drawable.bell)
-                )
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // About / Developer Section
-            SettingsSection(title = "About") {
-                Column(
+                SettingsSubHeader(title = "Layout")
+                Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalAlignment = Alignment.CenterHorizontally
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    val context = LocalContext.current
-                    val shiinojiResId = remember(context) {
-                        context.resources.getIdentifier("shiinoji", "drawable", context.packageName)
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("Home Grid Columns", style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold)
+                        Text("Discover feed density", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
-
-                    Box(
-                        modifier = Modifier
-                            .size(80.dp)
-                            .clip(CircleShape)
-                            .background(MaterialTheme.colorScheme.primaryContainer),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        if (shiinojiResId != 0) {
-                            Image(
-                                painter = painterResource(id = shiinojiResId),
-                                contentDescription = null,
-                                modifier = Modifier.fillMaxSize(),
-                                contentScale = ContentScale.Crop
-                            )
-                        } else {
-                            Icon(
-                                imageVector = ImageVector.vectorResource(R.drawable.user),
-                                contentDescription = null,
-                                modifier = Modifier.size(48.dp),
-                                tint = MaterialTheme.colorScheme.onPrimaryContainer
-                            )
-                        }
-                    }
-                    Spacer(modifier = Modifier.height(12.dp))
-                    Text(
-                        text = "Shiinoji",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
+                    SegmentedToggle(
+                        options = listOf(2, 3),
+                        selectedOption = homeItemsPerRow,
+                        onOptionSelected = { viewModel.setHomeItemsPerRow(it) }
                     )
-                    Text(
-                        text = "Developer",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Spacer(modifier = Modifier.height(12.dp))
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(16.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        IconButton(onClick = { /* Open GitHub */ }, modifier = Modifier.size(32.dp)) {
-                            Icon(
-                                imageVector = ImageVector.vectorResource(R.drawable.github_142_svgrepo_com),
-                                contentDescription = "GitHub",
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.size(24.dp)
-                            )
-                        }
-                        IconButton(onClick = { /* Open Discord */ }, modifier = Modifier.size(32.dp)) {
-                            Icon(
-                                imageVector = ImageVector.vectorResource(R.drawable.discord_fill_svgrepo_com),
-                                contentDescription = "Discord",
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant, // Discord Blurple
-                                modifier = Modifier.size(24.dp)
-                            )
-                        }
-                    }
                 }
+            }
 
-                Spacer(modifier = Modifier.height(24.dp))
-                Text(
-                    text = "Contributors",
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.padding(bottom = 12.dp)
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // SECTION: CONTENT & PERFORMANCE
+            SettingsCard(title = "Content & Performance") {
+                SettingsRow(
+                    title = "View History",
+                    description = "Recent activity tracking",
+                    onClick = onHistoryClick,
+                    trailing = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null, tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)) }
                 )
                 
-                // Placeholder for future collaborators
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(40.dp)
-                            .clip(CircleShape)
-                            .background(MaterialTheme.colorScheme.surfaceVariant),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = ImageVector.vectorResource(R.drawable.user),
-                            contentDescription = null,
-                            modifier = Modifier.size(24.dp),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
-                        )
-                    }
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Column {
-                        Text(
-                            text = "Contributor",
-                            style = MaterialTheme.typography.bodyMedium,
-                            fontWeight = FontWeight.Medium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
-                        )
-                        Text(
-                            text = "Contribute on GitHub",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
-                        )
-                    }
-                }
+                HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f))
+                
+                SettingsSubHeader(title = "Localization")
+                SettingsRow(title = "Anime Titles", value = titleLanguage.name.lowercase().replaceFirstChar { it.uppercase() }, onClick = { showTitleDialog = true })
+                SettingsRow(title = "Staff Names", value = staffLanguage.name.replace("_", " ").lowercase().replaceFirstChar { it.uppercase() }, onClick = { showStaffDialog = true })
 
-                Spacer(modifier = Modifier.height(24.dp))
-                Text(
-                    text = "API Credits",
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.padding(bottom = 12.dp)
+                Spacer(modifier = Modifier.height(12.dp))
+                SettingsSubHeader(title = "Display Formats")
+                SettingsRow(title = "Score Format", value = scoreFormat.name.replace("POINT_", "Point ").replace("_", ".").lowercase().replaceFirstChar { it.uppercase() }, onClick = { showScoreDialog = true })
+                SettingsRow(title = "Airing Format", value = airingFormat.name.lowercase().replaceFirstChar { it.uppercase() }, onClick = { showAiringDialog = true })
+
+                HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f))
+                
+                SettingsSubHeader(title = "Background Tasks")
+                SettingsSwitchRow(
+                    title = "Always-on Notifications",
+                    description = "Enable high-frequency background sync",
+                    checked = notificationsEnabled,
+                    onCheckedChange = { viewModel.setNotificationsEnabled(it) }
                 )
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(
-                        imageVector = ImageVector.vectorResource(R.drawable.anilist_svgrepo_com),
-                        contentDescription = "AniList",
-                        tint = Color(0xFF02A9FF),
-                        modifier = Modifier.size(32.dp)
-                    )
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Column {
-                        Text(
-                            text = "AniList API",
-                            style = MaterialTheme.typography.bodyMedium,
-                            fontWeight = FontWeight.Medium
-                        )
-                        Text(
-                            text = "Providing high-quality anime data",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                
+                SettingsRow(
+                    title = "Battery Optimization",
+                    description = if (isIgnoringBatteryOptimizations) "Optimized for background" else "Recommended for notifications",
+                    value = if (isIgnoringBatteryOptimizations) "Off" else "On",
+                    onClick = { 
+                        requestIgnoreBatteryOptimization(context)
+                        // This won't update immediately as it's an external activity, 
+                        // but user will see it when they return.
                     }
-                }
-
-                Spacer(modifier = Modifier.height(24.dp))
-                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-                Spacer(modifier = Modifier.height(16.dp))
-
-                Text(
-                    text = "AniHub v${BuildConfig.VERSION_NAME}",
-                    style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight.SemiBold
-                )
-                Text(
-                    text = "Anime Watchlist and Tracker App built with AniList API.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
 
-                Spacer(modifier = Modifier.height(16.dp))
-                Button(
-                    onClick = { viewModel.checkForUpdates() },
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp)
-                ) {
-                    Text("Check for Updates")
+                Spacer(modifier = Modifier.height(12.dp))
+                SettingsSubHeader(title = "App Features")
+                SettingsSwitchRow(title = "Adult Content (R18+)", checked = adultContent, onCheckedChange = { viewModel.setAdultContent(it) })
+                SettingsSwitchRow(title = "Airing Countdown", checked = showAiringCountdown, onCheckedChange = { viewModel.setShowAiringCountdown(it) })
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // SECTION: DATA
+            SettingsCard(title = "Data Management") {
+                SettingsRow(title = "Import MyAnimeList", onClick = { malPickerLauncher.launch("text/xml") })
+                SettingsRow(title = "Export Watchlist", onClick = { exportLauncher.launch("anihub_export.xml") })
+                SettingsRow(title = "Clear Cache", value = cacheSize, onClick = { showClearCacheDialog = true })
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // SECTION: ABOUT
+            AboutProfileCard(viewModel)
+
+            Spacer(modifier = Modifier.height(32.dp))
+        }
+    }
+}
+
+@Composable
+fun SettingsCard(
+    title: String,
+    content: @Composable ColumnScope.() -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(28.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+    ) {
+        Column(modifier = Modifier.padding(20.dp)) {
+            Text(title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.ExtraBold)
+            Spacer(modifier = Modifier.height(20.dp))
+            content()
+        }
+    }
+}
+
+@Composable
+fun SettingsRow(
+    title: String,
+    description: String? = null,
+    value: String? = null,
+    onClick: () -> Unit,
+    trailing: @Composable (() -> Unit)? = null
+) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+    val scale by animateFloatAsState(if (isPressed) 0.97f else 1f, spring(dampingRatio = 0.7f))
+
+    Surface(
+        onClick = onClick,
+        interactionSource = interactionSource,
+        modifier = Modifier.fillMaxWidth().scale(scale),
+        color = Color.Transparent,
+        shape = RoundedCornerShape(16.dp)
+    ) {
+        Row(
+            modifier = Modifier.padding(vertical = 12.dp, horizontal = 4.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(title, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
+                if (description != null) {
+                    Text(description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
+            }
+            if (value != null) {
+                Text(value, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary)
+                Spacer(modifier = Modifier.width(8.dp))
+                Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f))
+            } else {
+                trailing?.invoke()
             }
         }
     }
 }
 
 @Composable
-fun SettingsClickableRow(
-    label: String,
-    value: String? = null,
+fun SettingsSwitchRow(
+    title: String,
     description: String? = null,
-    icon: ImageVector? = null,
-    onClick: () -> Unit
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit
 ) {
-    Surface(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
-            .clickable { onClick() },
-        color = Color.Transparent
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        Row(
-            modifier = Modifier
-                .padding(vertical = 8.dp, horizontal = 4.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
+        Column(modifier = Modifier.weight(1f)) {
+            Text(title, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
+            if (description != null) {
+                Text(description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
+        Switch(
+            checked = checked,
+            onCheckedChange = onCheckedChange,
+            colors = SwitchDefaults.colors(
+                checkedThumbColor = MaterialTheme.colorScheme.onPrimary,
+                checkedTrackColor = MaterialTheme.colorScheme.primary
+            )
+        )
+    }
+}
+
+@Composable
+fun ThemePreviewCard(
+    label: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+    surfaceColor: Color,
+    accentColor: Color,
+    icon: ImageVector? = null
+) {
+    val scale by animateFloatAsState(if (selected) 1.05f else 1f, spring(dampingRatio = 0.6f))
+    val elevation by animateDpAsState(if (selected) 8.dp else 0.dp)
+
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier.width(76.dp)
+    ) {
+        Card(
+            onClick = onClick,
+            modifier = Modifier.height(100.dp).fillMaxWidth().scale(scale),
+            shape = RoundedCornerShape(14.dp),
+            colors = CardDefaults.cardColors(containerColor = surfaceColor),
+            border = if (selected) BorderStroke(2.dp, MaterialTheme.colorScheme.primary) else null,
+            elevation = CardDefaults.cardElevation(defaultElevation = elevation)
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
-                if (icon != null) {
-                    Icon(
-                        imageVector = icon,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(24.dp)
-                    )
-                    Spacer(modifier = Modifier.width(16.dp))
+            Box(modifier = Modifier.fillMaxSize().padding(8.dp)) {
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Box(modifier = Modifier.size(width = 30.dp, height = 6.dp).clip(CircleShape).background(accentColor))
+                    Box(modifier = Modifier.size(width = 20.dp, height = 4.dp).clip(CircleShape).background(accentColor.copy(alpha = 0.4f)))
                 }
-                Column {
-                    Text(
-                        text = label,
-                        style = MaterialTheme.typography.bodyLarge,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                    if (description != null) {
-                        Text(
-                            text = description,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
+                if (icon != null) {
+                    Icon(icon, null, modifier = Modifier.align(Alignment.Center).size(24.dp), tint = accentColor)
                 }
             }
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                if (value != null) {
-                    Text(
-                        text = value,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.primary
+        }
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            label,
+            style = MaterialTheme.typography.labelSmall,
+            fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
+            color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+        )
+    }
+}
+
+@Composable
+fun PalettePreviewCard(
+    selected: Boolean,
+    onClick: () -> Unit,
+    accentColor: Color,
+    label: String
+) {
+    val scale by animateFloatAsState(if (selected) 1.15f else 1f, spring(dampingRatio = 0.5f))
+    
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Box(
+            modifier = Modifier
+                .size(56.dp)
+                .scale(scale)
+                .clip(CircleShape)
+                .border(if (selected) 2.dp else 0.dp, MaterialTheme.colorScheme.primary, CircleShape)
+                .padding(if (selected) 4.dp else 0.dp)
+                .clip(CircleShape)
+                .background(accentColor)
+                .clickable { onClick() }
+        )
+        Spacer(modifier = Modifier.height(6.dp))
+        Text(
+            label,
+            style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
+            color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
+}
+
+@Composable
+fun AboutProfileCard(viewModel: ThemeViewModel) {
+    SettingsCard(title = "About") {
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            val context = LocalContext.current
+            val shiinojiResId = remember(context) {
+                context.resources.getIdentifier("shiinoji", "drawable", context.packageName)
+            }
+
+            Box(
+                modifier = Modifier
+                    .size(90.dp)
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.primaryContainer),
+                contentAlignment = Alignment.Center
+            ) {
+                if (shiinojiResId != 0) {
+                    Image(
+                        painter = painterResource(id = shiinojiResId),
+                        contentDescription = null,
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop
                     )
-                    Spacer(modifier = Modifier.width(8.dp))
+                } else {
+                    Icon(imageVector = ImageVector.vectorResource(R.drawable.user), contentDescription = null, modifier = Modifier.size(48.dp), tint = MaterialTheme.colorScheme.onPrimaryContainer)
                 }
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                    contentDescription = null,
-                    modifier = Modifier.size(20.dp),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
+            }
+            
+            Spacer(modifier = Modifier.height(16.dp))
+            Text("Shiinoji", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.ExtraBold)
+            Text("Lead Developer", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
+            
+            Spacer(modifier = Modifier.height(20.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                val context = LocalContext.current
+                SocialButton(R.drawable.github_142_svgrepo_com) {
+                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/Shiinoji/Anihub"))
+                    context.startActivity(intent)
+                }
+                SocialButton(R.drawable.discord_fill_svgrepo_com) {
+                    android.widget.Toast.makeText(context, "Coming soon", android.widget.Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(32.dp))
+        
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(ImageVector.vectorResource(R.drawable.anilist_svgrepo_com), null, modifier = Modifier.size(24.dp), tint = Color(0xFF02A9FF))
+            Spacer(modifier = Modifier.width(12.dp))
+            Column {
+                Text("AniList API", style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold)
+                Text("Powered by high-quality anime data", style = MaterialTheme.typography.bodySmall)
+            }
+        }
+
+        HorizontalDivider(modifier = Modifier.padding(vertical = 24.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column {
+                Text("AniHub v${BuildConfig.VERSION_NAME}", style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold)
+                Text("Build ${BuildConfig.VERSION_CODE}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            Button(
+                onClick = { viewModel.checkForUpdates() },
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Text("Update")
+            }
+        }
+    }
+}
+
+@Composable
+fun SocialButton(iconRes: Int, onClick: () -> Unit) {
+    IconButton(
+        onClick = onClick,
+        modifier = Modifier
+            .size(44.dp)
+            .background(MaterialTheme.colorScheme.surfaceContainerHighest, CircleShape)
+    ) {
+        Icon(ImageVector.vectorResource(iconRes), null, modifier = Modifier.size(22.dp), tint = MaterialTheme.colorScheme.onSurface)
+    }
+}
+
+@Composable
+fun SegmentedToggle(
+    options: List<Int>,
+    selectedOption: Int,
+    onOptionSelected: (Int) -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .clip(RoundedCornerShape(14.dp))
+            .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+            .padding(4.dp),
+        horizontalArrangement = Arrangement.spacedBy(4.dp)
+    ) {
+        options.forEach { option ->
+            val isSelected = selectedOption == option
+            Box(
+                modifier = Modifier
+                    .size(width = 52.dp, height = 38.dp)
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent)
+                    .clickable { onOptionSelected(option) },
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = option.toString(),
+                    color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
+                    fontWeight = FontWeight.Bold
                 )
             }
         }
     }
+}
+
+@Composable
+fun SettingsSubHeader(title: String) {
+    Text(
+        text = title,
+        style = MaterialTheme.typography.labelLarge,
+        color = MaterialTheme.colorScheme.primary,
+        fontWeight = FontWeight.Bold,
+        modifier = Modifier.padding(bottom = 8.dp)
+    )
 }
 
 @Composable
@@ -589,9 +667,7 @@ fun <T> EnumSelectionDialog(
         title = { Text(title, style = MaterialTheme.typography.titleLarge) },
         text = {
             Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .verticalScroll(rememberScrollState())
+                modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState())
             ) {
                 options.forEach { option ->
                     Row(
@@ -599,150 +675,80 @@ fun <T> EnumSelectionDialog(
                             .fillMaxWidth()
                             .selectable(
                                 selected = option == selected,
-                                onClick = {
-                                    onSelect(option)
-                                    onDismiss()
-                                }
+                                onClick = { onSelect(option); onDismiss() }
                             )
                             .padding(vertical = 4.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        RadioButton(
-                            selected = option == selected,
-                            onClick = {
-                                onSelect(option)
-                                onDismiss()
-                            }
-                        )
-                        Text(
-                            text = labelProvider(option),
-                            style = MaterialTheme.typography.bodyLarge,
-                            modifier = Modifier.padding(start = 12.dp)
-                        )
+                        RadioButton(selected = option == selected, onClick = { onSelect(option); onDismiss() })
+                        Text(text = labelProvider(option), style = MaterialTheme.typography.bodyLarge, modifier = Modifier.padding(start = 12.dp))
                     }
                 }
             }
         },
-        confirmButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Cancel")
-            }
-        }
+        confirmButton = { TextButton(onClick = onDismiss) { Text("Cancel") } }
     )
 }
 
 @Composable
-fun SettingsSwitch(
-    label: String,
-    description: String,
-    checked: Boolean,
-    onCheckedChange: (Boolean) -> Unit,
-    icon: ImageVector? = null
-) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween
-    ) {
-        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
-            if (icon != null) {
-                Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-                Spacer(modifier = Modifier.width(12.dp))
-            }
-            Column {
-                Text(label, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
-                Text(description, style = MaterialTheme.typography.bodySmall)
-            }
+private fun ImportStatusDialogs(state: DataManagementViewModel.ImportState, dataViewModel: DataManagementViewModel) {
+    when (state) {
+        is DataManagementViewModel.ImportState.Loading -> {
+            AlertDialog(
+                onDismissRequest = {},
+                title = { Text("Importing List") },
+                text = {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        LinearProgressIndicator(progress = { state.progress }, modifier = Modifier.fillMaxWidth())
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text("${(state.progress * 100).toInt()}%")
+                    }
+                },
+                confirmButton = {}
+            )
         }
-        Switch(
-            checked = checked,
-            onCheckedChange = onCheckedChange,
-            thumbContent = {
-                Icon(
-                    imageVector = if (checked) Icons.Default.Check else Icons.Default.Close,
-                    contentDescription = null,
-                    modifier = Modifier.size(SwitchDefaults.IconSize)
-                )
-            }
-        )
+        is DataManagementViewModel.ImportState.Success -> {
+            AlertDialog(
+                onDismissRequest = { dataViewModel.resetImportState() },
+                title = { Text("Complete") },
+                text = { Text("Imported: ${state.result.imported}\nSkipped: ${state.result.skipped}") },
+                confirmButton = { TextButton(onClick = { dataViewModel.resetImportState() }) { Text("OK") } }
+            )
+        }
+        is DataManagementViewModel.ImportState.Error -> {
+            AlertDialog(
+                onDismissRequest = { dataViewModel.resetImportState() },
+                title = { Text("Error") },
+                text = { Text(state.message) },
+                confirmButton = { TextButton(onClick = { dataViewModel.resetImportState() }) { Text("OK") } }
+            )
+        }
+        else -> {}
     }
 }
 
-@Composable
-fun SettingsSection(
-    title: String,
-    content: @Composable ColumnScope.() -> Unit
-) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)
-    ) {
-        Column(modifier = Modifier.padding(24.dp)) {
-            Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-            Spacer(modifier = Modifier.height(16.dp))
-            content()
-        }
+private fun checkBatteryOptimization(context: Context): Boolean {
+    val powerManager = context.getSystemService(Context.POWER_SERVICE) as PowerManager
+    return powerManager.isIgnoringBatteryOptimizations(context.packageName)
+}
+
+private fun requestIgnoreBatteryOptimization(context: Context) {
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+        val intent = Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)
+        context.startActivity(intent)
     }
 }
 
-@Composable
-fun ThemeOption(
-    selected: Boolean,
-    onClick: () -> Unit,
-    color: Color? = null,
-    icon: @Composable (() -> Unit)? = null
-) {
-    Box(
-        modifier = Modifier
-            .size(52.dp)
-            .then(
-                if (selected) Modifier.border(2.dp, MaterialTheme.colorScheme.primary, CircleShape)
-                else Modifier
-            )
-            .padding(4.dp)
-            .clip(CircleShape)
-            .background(color ?: MaterialTheme.colorScheme.surfaceVariant)
-            .clickable { onClick() },
-        contentAlignment = Alignment.Center
-    ) {
-        if (icon != null) icon()
-    }
-}
-
-@Composable
-fun PaletteOption(
-    selected: Boolean,
-    onClick: () -> Unit,
-    colorTop: Color? = null,
-    colorBottom: Color? = null,
-    icon: @Composable (() -> Unit)? = null
-) {
-    Box(
-        modifier = Modifier
-            .size(52.dp)
-            .then(
-                if (selected) Modifier.border(2.dp, MaterialTheme.colorScheme.primary, CircleShape)
-                else Modifier
-            )
-            .padding(4.dp)
-            .clip(CircleShape)
-            .background(MaterialTheme.colorScheme.surfaceVariant)
-            .clickable { onClick() },
-        contentAlignment = Alignment.Center
-    ) {
-        if (icon != null) icon()
-        if (colorTop != null && colorBottom != null) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(
-                        Brush.verticalGradient(
-                            0.5f to colorTop,
-                            0.5f to colorBottom
-                        )
-                    )
-            )
-        }
-    }
+private fun getPaletteColors(palette: ColorPalette) = when(palette) {
+    ColorPalette.SAKURA -> SakuraSurface to SakuraAccent
+    ColorPalette.OCEAN -> OceanSurface to OceanAccent
+    ColorPalette.FOREST -> ForestSurface to ForestAccent
+    ColorPalette.LAVENDER -> LavenderSurface to LavenderAccent
+    ColorPalette.MIDNIGHT -> MidnightSurface to MidnightAccent
+    ColorPalette.SUNSET -> SunsetSurface to SunsetAccent
+    ColorPalette.ARCTIC -> ArcticSurface to ArcticAccent
+    ColorPalette.MATCHA -> MatchaSurface to MatchaAccent
+    ColorPalette.CYBER -> CyberSurface to CyberAccent
+    ColorPalette.AMBER -> AmberSurface to AmberAccent
+    else -> Color.White to AniListBlue
 }

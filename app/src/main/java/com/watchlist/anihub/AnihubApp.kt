@@ -41,7 +41,7 @@ class AnihubApp : Application(), Configuration.Provider {
             .build()
 
         val repeatingRequest = PeriodicWorkRequestBuilder<NotificationWorker>(
-            3, TimeUnit.HOURS // Check every 3 hours
+            15, TimeUnit.MINUTES // High frequency (Minimum allowed by Android)
         )
             .setConstraints(constraints)
             .build()

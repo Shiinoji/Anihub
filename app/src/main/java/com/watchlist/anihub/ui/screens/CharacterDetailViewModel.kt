@@ -10,17 +10,27 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+/**
+ * ViewModel for the Character Detail screen, responsible for fetching character metadata,
+ * biographical info, and their anime appearances from the AniList API.
+ */
 @HiltViewModel
 class CharacterDetailViewModel @Inject constructor(
     private val aniListService: AniListService
 ) : ViewModel() {
 
     private val _characterDetail = MutableStateFlow<UiState<Character>>(UiState.Loading)
+    /**
+     * Observable state of the character details.
+     */
     val characterDetail = _characterDetail.asStateFlow()
 
     private val _isRefreshing = MutableStateFlow(false)
     val isRefreshing = _isRefreshing.asStateFlow()
 
+    /**
+     * Fetches metadata for a specific character ID from the network.
+     */
     fun fetchCharacterDetail(id: Int) {
         viewModelScope.launch {
             _characterDetail.value = UiState.Loading
@@ -43,6 +53,9 @@ class CharacterDetailViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Triggers a manual network refresh for the current character.
+     */
     fun refresh(id: Int) {
         _isRefreshing.value = true
         fetchCharacterDetail(id)

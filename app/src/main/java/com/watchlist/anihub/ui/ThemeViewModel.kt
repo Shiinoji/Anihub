@@ -17,11 +17,17 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+/**
+ * Global ViewModel responsible for managing application-wide settings, themes,
+ * and background updates. This ViewModel is typically scoped to the Activity.
+ */
 @HiltViewModel
 class ThemeViewModel @Inject constructor(
     private val themeManager: ThemeManager,
     private val updateManager: UpdateManager,
 ) : ViewModel() {
+    
+    // Observable preference states
     val themeMode = themeManager.themeMode.stateIn(
         viewModelScope, SharingStarted.WhileSubscribed(5000), ThemeMode.SYSTEM
     )
@@ -51,7 +57,11 @@ class ThemeViewModel @Inject constructor(
     val notificationsEnabled: StateFlow<Boolean> = themeManager.notificationsEnabled.stateIn(
         viewModelScope, SharingStarted.WhileSubscribed(5000), true
     )
+    val homeItemsPerRow: StateFlow<Int> = themeManager.homeItemsPerRow.stateIn(
+        viewModelScope, SharingStarted.WhileSubscribed(5000), 2
+    )
 
+    // Update methods for persisting preferences
     fun setThemeMode(mode: ThemeMode) {
         viewModelScope.launch {
             themeManager.setThemeMode(mode)
@@ -106,6 +116,18 @@ class ThemeViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Updates the column count for the Home Discover grid.
+     */
+    fun setHomeItemsPerRow(count: Int) {
+        viewModelScope.launch {
+            themeManager.setHomeItemsPerRow(count)
+        }
+    }
+
+    /**
+     * Triggers an asynchronous check for application updates.
+     */
     fun checkForUpdates() {
         viewModelScope.launch {
             updateManager.checkForUpdates()

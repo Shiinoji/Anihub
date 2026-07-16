@@ -25,6 +25,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.watchlist.anihub.R
 import com.watchlist.anihub.ui.UiState
+import com.watchlist.anihub.data.local.WatchlistStatus
 import com.watchlist.anihub.ui.components.ErrorView
 import com.watchlist.anihub.ui.components.SimpleAnimeCard
 import com.watchlist.anihub.ui.components.SimpleAnimeCardSkeleton
@@ -38,6 +39,7 @@ fun SearchScreen(
     viewModel: SearchViewModel = hiltViewModel()
 ) {
     val results by viewModel.searchResults.collectAsState()
+    val watchlistMap by viewModel.watchlistMap.collectAsState()
     val searchQuery by viewModel.searchQuery.collectAsState()
     val genres by viewModel.genres.collectAsState()
     val selectedGenre by viewModel.selectedGenre.collectAsState()
@@ -257,16 +259,25 @@ fun SearchScreen(
                                 SimpleAnimeCard(
                                     title = anime.title.getDisplayTitle(titleLanguage),
                                     imageUrl = anime.coverImage.extraLarge ?: anime.coverImage.large ?: "",
-                                    onClick = { onAnimeClick(anime.id) }
+                                    onClick = { onAnimeClick(anime.id) },
+                                    status = watchlistMap[anime.id]?.getDisplayName()
                                 )
                             }
                         }
                     }
                 }
                 is UiState.Error -> {
+                    val isConnectionError = state.message.contains("network", ignoreCase = true) || 
+                                          state.message.contains("internet", ignoreCase = true) ||
+                                          state.message.contains("connection", ignoreCase = true)
                     ErrorView(
                         message = state.message,
-                        onRetry = { viewModel.onSearchExplicit(searchQuery) }
+                        onRetry = { viewModel.onSearchExplicit(searchQuery) },
+                        icon = if (isConnectionError) {
+                            ImageVector.vectorResource(R.drawable.wifi_off)
+                        } else {
+                            ImageVector.vectorResource(R.drawable.triangle_alert)
+                        }
                     )
                 }
             }

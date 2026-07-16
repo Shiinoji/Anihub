@@ -10,9 +10,9 @@ object NetworkUtils {
             is UnknownHostException, is IOException -> "No internet connection. Please check your network."
             is HttpException -> {
                 when (e.code()) {
-                    429 -> "Too many requests. Please slow down."
+                    429 -> "Too many requests."
                     404 -> "Requested content not found."
-                    500, 502, 503 -> "Server error. AniList might be down."
+                    500, 502, 503 -> "Server error. Please try again later."
                     else -> "Network error: ${e.code()}"
                 }
             }

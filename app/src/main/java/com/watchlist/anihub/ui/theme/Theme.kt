@@ -17,34 +17,60 @@ val LocalTitleLanguage = compositionLocalOf { TitleLanguage.ROMAJI }
 val LocalScoreFormat = compositionLocalOf { ScoreFormat.POINT_10 }
 val LocalShowAiringCountdown = compositionLocalOf { true }
 
-private fun getLightColorScheme(palette: ColorPalette) = when (palette) {
-    ColorPalette.DYNAMIC -> lightColorScheme(primary = Primary, secondary = Secondary, tertiary = Tertiary, primaryContainer = Primary.copy(alpha = 0.1f), onPrimaryContainer = Primary)
-    ColorPalette.BROWN -> lightColorScheme(primary = BrownPrimary, secondary = BrownSecondary, tertiary = BrownTertiary, primaryContainer = BrownPrimary.copy(alpha = 0.1f), onPrimaryContainer = BrownPrimary)
-    ColorPalette.DEEP_BROWN -> lightColorScheme(primary = DeepBrownPrimary, secondary = DeepBrownSecondary, tertiary = DeepBrownTertiary, primaryContainer = DeepBrownPrimary.copy(alpha = 0.1f), onPrimaryContainer = DeepBrownPrimary)
-    ColorPalette.PURPLE -> lightColorScheme(primary = PurplePrimary, secondary = PurpleSecondary, tertiary = PurpleTertiary, primaryContainer = PurplePrimary.copy(alpha = 0.1f), onPrimaryContainer = PurplePrimary)
-    ColorPalette.DEEP_PURPLE -> lightColorScheme(primary = DeepPurplePrimary, secondary = DeepPurpleSecondary, tertiary = DeepPurpleTertiary, primaryContainer = DeepPurplePrimary.copy(alpha = 0.1f), onPrimaryContainer = DeepPurplePrimary)
-    ColorPalette.OCEAN -> lightColorScheme(primary = OceanPrimary, secondary = OceanSecondary, tertiary = OceanTertiary, primaryContainer = OceanPrimary.copy(alpha = 0.1f), onPrimaryContainer = OceanPrimary)
-    ColorPalette.FOREST -> lightColorScheme(primary = ForestPrimary, secondary = ForestSecondary, tertiary = ForestTertiary, primaryContainer = ForestPrimary.copy(alpha = 0.1f), onPrimaryContainer = ForestPrimary)
-    ColorPalette.CHERRY -> lightColorScheme(primary = CherryPrimary, secondary = CherrySecondary, tertiary = CherryTertiary, primaryContainer = CherryPrimary.copy(alpha = 0.1f), onPrimaryContainer = CherryPrimary)
-    ColorPalette.SUNSET -> lightColorScheme(primary = SunsetPrimary, secondary = SunsetSecondary, tertiary = SunsetTertiary, primaryContainer = SunsetPrimary.copy(alpha = 0.1f), onPrimaryContainer = SunsetPrimary)
-    ColorPalette.LAVENDER -> lightColorScheme(primary = LavenderPrimary, secondary = LavenderSecondary, tertiary = LavenderTertiary, primaryContainer = LavenderPrimary.copy(alpha = 0.1f), onPrimaryContainer = LavenderPrimary)
-    ColorPalette.MINT -> lightColorScheme(primary = MintPrimary, secondary = MintSecondary, tertiary = MintTertiary, primaryContainer = MintPrimary.copy(alpha = 0.1f), onPrimaryContainer = MintPrimary)
-    ColorPalette.GOLD -> lightColorScheme(primary = GoldPrimary, secondary = GoldSecondary, tertiary = GoldTertiary, primaryContainer = GoldPrimary.copy(alpha = 0.1f), onPrimaryContainer = GoldPrimary)
+private fun getLightColorScheme(palette: ColorPalette): ColorScheme {
+    val (primary, secondary, surface) = when (palette) {
+        ColorPalette.DYNAMIC -> arrayOf(AniListBlue, AniListBlue.copy(alpha = 0.8f), Color(0xFFFDFBFF))
+        ColorPalette.SAKURA -> arrayOf(SakuraAccent, SakuraSecondary, SakuraSurface)
+        ColorPalette.OCEAN -> arrayOf(OceanAccent, OceanSecondary, OceanSurface)
+        ColorPalette.FOREST -> arrayOf(ForestAccent, ForestSecondary, ForestSurface)
+        ColorPalette.LAVENDER -> arrayOf(LavenderAccent, LavenderSecondary, LavenderSurface)
+        ColorPalette.MIDNIGHT -> arrayOf(MidnightAccent, MidnightSecondary, Color(0xFFFDFBFF)) // Use standard light bg for Midnight in light mode
+        ColorPalette.SUNSET -> arrayOf(SunsetAccent, SunsetSecondary, SunsetSurface)
+        ColorPalette.ARCTIC -> arrayOf(ArcticAccent, ArcticSecondary, ArcticSurface)
+        ColorPalette.MATCHA -> arrayOf(MatchaAccent, MatchaSecondary, MatchaSurface)
+        ColorPalette.CYBER -> arrayOf(CyberAccent, CyberSecondary, Color(0xFFFDFBFF)) // Use standard light bg for Cyber in light mode
+        ColorPalette.AMBER -> arrayOf(AmberAccent, AmberSecondary, AmberSurface)
+    }
+
+    return lightColorScheme(
+        primary = primary,
+        secondary = secondary,
+        background = surface,
+        surface = surface,
+        primaryContainer = primary.copy(alpha = 0.1f),
+        onPrimaryContainer = primary,
+        surfaceVariant = surface.copy(alpha = 0.9f),
+        surfaceContainer = surface
+    )
 }
 
-private fun getDarkColorScheme(palette: ColorPalette, isAmoled: Boolean) = when (palette) {
-    ColorPalette.DYNAMIC -> darkColorScheme(primary = Primary, secondary = Secondary, tertiary = Tertiary, background = if (isAmoled) DeepBlack else DarkGrey, surface = if (isAmoled) DeepBlack else DarkGrey, primaryContainer = Primary.copy(alpha = 0.2f), onPrimaryContainer = Primary)
-    ColorPalette.BROWN -> darkColorScheme(primary = BrownPrimary, secondary = BrownSecondary, tertiary = BrownTertiary, background = if (isAmoled) DeepBlack else DarkGrey, surface = if (isAmoled) DeepBlack else DarkGrey, primaryContainer = BrownPrimary.copy(alpha = 0.2f), onPrimaryContainer = BrownPrimary)
-    ColorPalette.DEEP_BROWN -> darkColorScheme(primary = DeepBrownPrimary, secondary = DeepBrownSecondary, tertiary = DeepBrownTertiary, background = if (isAmoled) DeepBlack else DarkGrey, surface = if (isAmoled) DeepBlack else DarkGrey, primaryContainer = DeepBrownPrimary.copy(alpha = 0.2f), onPrimaryContainer = DeepBrownPrimary)
-    ColorPalette.PURPLE -> darkColorScheme(primary = PurplePrimary, secondary = PurpleSecondary, tertiary = PurpleTertiary, background = if (isAmoled) DeepBlack else DarkGrey, surface = if (isAmoled) DeepBlack else DarkGrey, primaryContainer = PurplePrimary.copy(alpha = 0.2f), onPrimaryContainer = PurplePrimary)
-    ColorPalette.DEEP_PURPLE -> darkColorScheme(primary = DeepPurplePrimary, secondary = DeepPurpleSecondary, tertiary = DeepPurpleTertiary, background = if (isAmoled) DeepBlack else DarkGrey, surface = if (isAmoled) DeepBlack else DarkGrey, primaryContainer = DeepPurplePrimary.copy(alpha = 0.2f), onPrimaryContainer = DeepPurplePrimary)
-    ColorPalette.OCEAN -> darkColorScheme(primary = OceanPrimary, secondary = OceanSecondary, tertiary = OceanTertiary, background = if (isAmoled) DeepBlack else DarkGrey, surface = if (isAmoled) DeepBlack else DarkGrey, primaryContainer = OceanPrimary.copy(alpha = 0.2f), onPrimaryContainer = OceanPrimary)
-    ColorPalette.FOREST -> darkColorScheme(primary = ForestPrimary, secondary = ForestSecondary, tertiary = ForestTertiary, background = if (isAmoled) DeepBlack else DarkGrey, surface = if (isAmoled) DeepBlack else DarkGrey, primaryContainer = ForestPrimary.copy(alpha = 0.2f), onPrimaryContainer = ForestPrimary)
-    ColorPalette.CHERRY -> darkColorScheme(primary = CherryPrimary, secondary = CherrySecondary, tertiary = CherryTertiary, background = if (isAmoled) DeepBlack else DarkGrey, surface = if (isAmoled) DeepBlack else DarkGrey, primaryContainer = CherryPrimary.copy(alpha = 0.2f), onPrimaryContainer = CherryPrimary)
-    ColorPalette.SUNSET -> darkColorScheme(primary = SunsetPrimary, secondary = SunsetSecondary, tertiary = SunsetTertiary, background = if (isAmoled) DeepBlack else DarkGrey, surface = if (isAmoled) DeepBlack else DarkGrey, primaryContainer = SunsetPrimary.copy(alpha = 0.2f), onPrimaryContainer = SunsetPrimary)
-    ColorPalette.LAVENDER -> darkColorScheme(primary = LavenderPrimary, secondary = LavenderSecondary, tertiary = LavenderTertiary, background = if (isAmoled) DeepBlack else DarkGrey, surface = if (isAmoled) DeepBlack else DarkGrey, primaryContainer = LavenderPrimary.copy(alpha = 0.2f), onPrimaryContainer = LavenderPrimary)
-    ColorPalette.MINT -> darkColorScheme(primary = MintPrimary, secondary = MintSecondary, tertiary = MintTertiary, background = if (isAmoled) DeepBlack else DarkGrey, surface = if (isAmoled) DeepBlack else DarkGrey, primaryContainer = MintPrimary.copy(alpha = 0.2f), onPrimaryContainer = MintPrimary)
-    ColorPalette.GOLD -> darkColorScheme(primary = GoldPrimary, secondary = GoldSecondary, tertiary = GoldTertiary, background = if (isAmoled) DeepBlack else DarkGrey, surface = if (isAmoled) DeepBlack else DarkGrey, primaryContainer = GoldPrimary.copy(alpha = 0.2f), onPrimaryContainer = GoldPrimary)
+private fun getDarkColorScheme(palette: ColorPalette, isAmoled: Boolean): ColorScheme {
+    val (primary, secondary, surface) = when (palette) {
+        ColorPalette.DYNAMIC -> arrayOf(AniListBlue, AniListBlue.copy(alpha = 0.8f), DarkGrey)
+        ColorPalette.SAKURA -> arrayOf(SakuraAccent, SakuraSecondary, DarkGrey)
+        ColorPalette.OCEAN -> arrayOf(OceanAccent, OceanSecondary, DarkGrey)
+        ColorPalette.FOREST -> arrayOf(ForestAccent, ForestSecondary, DarkGrey)
+        ColorPalette.LAVENDER -> arrayOf(LavenderAccent, LavenderSecondary, DarkGrey)
+        ColorPalette.MIDNIGHT -> arrayOf(MidnightAccent, MidnightSecondary, MidnightSurface)
+        ColorPalette.SUNSET -> arrayOf(SunsetAccent, SunsetSecondary, DarkGrey)
+        ColorPalette.ARCTIC -> arrayOf(ArcticAccent, ArcticSecondary, DarkGrey)
+        ColorPalette.MATCHA -> arrayOf(MatchaAccent, MatchaSecondary, DarkGrey)
+        ColorPalette.CYBER -> arrayOf(CyberAccent, CyberSecondary, CyberSurface)
+        ColorPalette.AMBER -> arrayOf(AmberAccent, AmberSecondary, DarkGrey)
+    }
+
+    val background = if (isAmoled) DeepBlack else surface
+    val actualSurface = if (isAmoled) DeepBlack else surface
+
+    return darkColorScheme(
+        primary = primary,
+        secondary = secondary,
+        background = background,
+        surface = actualSurface,
+        primaryContainer = primary.copy(alpha = 0.2f),
+        onPrimaryContainer = primary,
+        surfaceContainer = if (isAmoled) Color(0xFF0A0A0A) else surface.copy(alpha = 1.2f)
+    )
 }
 
 @Composable
@@ -72,15 +98,14 @@ fun AnihubTheme(
         else -> getLightColorScheme(colorPalette)
     }
 
-    // Force AMOLED black background if selected
+    // AMOLED optimizations
     if (themeMode == ThemeMode.AMOLED) {
         colorScheme = colorScheme.copy(
             background = DeepBlack,
             surface = DeepBlack,
-            surfaceVariant = Color(0xFF121212),
-            onBackground = Color.White,
-            onSurface = Color.White,
-            surfaceContainer = Color(0xFF0A0A0A)
+            surfaceContainer = Color(0xFF0A0A0A),
+            surfaceContainerHigh = Color(0xFF141414),
+            surfaceVariant = Color(0xFF1A1A1A)
         )
     }
 
@@ -88,7 +113,8 @@ fun AnihubTheme(
     if (!view.isInEditMode) {
         SideEffect {
             val window = (view.context as Activity).window
-            WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = !darkTheme
+            val insetsController = WindowCompat.getInsetsController(window, view)
+            insetsController.isAppearanceLightStatusBars = !darkTheme
         }
     }
 

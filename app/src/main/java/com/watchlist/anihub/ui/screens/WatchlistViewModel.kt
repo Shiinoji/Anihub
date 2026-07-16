@@ -11,24 +11,40 @@ import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+/**
+ * ViewModel for the Watchlist screen, managing the user's personal collection,
+ * including filtering, sorting, and favoriting.
+ */
 @HiltViewModel
 class WatchlistViewModel @Inject constructor(
     private val animeDao: AnimeDao,
     private val themeManager: ThemeManager
 ) : ViewModel() {
 
+    /**
+     * Current status filter (e.g., Watching, Finished). If null, all items are shown.
+     */
     val filterStatus = themeManager.watchlistFilterStatus.stateIn(
         viewModelScope, SharingStarted.WhileSubscribed(5000), null
     )
 
+    /**
+     * Current sort criteria for the watchlist.
+     */
     val sortOrder = themeManager.watchlistSortOrder.stateIn(
         viewModelScope, SharingStarted.WhileSubscribed(5000), WatchlistSort.LAST_ADDED
     )
 
+    /**
+     * User preference for the number of columns in the watchlist grid.
+     */
     val itemsPerRow = themeManager.watchlistItemsPerRow.stateIn(
         viewModelScope, SharingStarted.WhileSubscribed(5000), 2
     )
 
+    /**
+     * The processed watchlist, combining local data with current filters and sorting.
+     */
     val watchlist = combine(
         animeDao.getWatchlist(),
         filterStatus,
@@ -48,6 +64,9 @@ class WatchlistViewModel @Inject constructor(
         filteredList
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
+    /**
+     * List of favorite anime, sorted according to user preference.
+     */
     val favorites = combine(
         animeDao.getFavorites(),
         sortOrder
@@ -79,12 +98,18 @@ class WatchlistViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Toggles the favorite status of a specific anime entry.
+     */
     fun toggleFavorite(anime: AnimeEntity) {
         viewModelScope.launch {
             animeDao.insertAnime(anime.copy(isFavorite = !anime.isFavorite))
         }
     }
 
+    /**
+     * Removes an anime from the user's collection.
+     */
     fun removeFromWatchlist(anime: AnimeEntity) {
         viewModelScope.launch {
             animeDao.deleteAnime(anime)

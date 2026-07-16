@@ -16,6 +16,17 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 
+/**
+ * A standardized card component for displaying anime media with an optional status badge.
+ * Supports both click and long-click interactions.
+ *
+ * @param title The display title of the anime.
+ * @param imageUrl The URL of the anime's cover image.
+ * @param onClick Triggered when the card is clicked.
+ * @param modifier Custom modifier for the component.
+ * @param onLongClick Triggered when the card is long-pressed (optional).
+ * @param status Optional text for a status badge (e.g., "Watching", "Finished") displayed in the top-left.
+ */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun SimpleAnimeCard(
@@ -45,6 +56,7 @@ fun SimpleAnimeCard(
             )
         ) {
             Box(modifier = Modifier.fillMaxSize()) {
+                // High-quality anime cover image
                 AsyncImage(
                     model = imageUrl,
                     contentDescription = title,
@@ -52,9 +64,10 @@ fun SimpleAnimeCard(
                     contentScale = ContentScale.Crop
                 )
                 
+                // Watchlist status badge (appears if the anime is in the user's list)
                 if (status != null) {
                     Surface(
-                        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.85f),
+                        color = MaterialTheme.colorScheme.primary,
                         shape = RoundedCornerShape(bottomEnd = 12.dp),
                         modifier = Modifier.align(Alignment.TopStart)
                     ) {
@@ -62,7 +75,7 @@ fun SimpleAnimeCard(
                             text = status,
                             style = MaterialTheme.typography.labelSmall,
                             modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                            color = MaterialTheme.colorScheme.onPrimaryContainer,
+                            color = MaterialTheme.colorScheme.onPrimary,
                             fontWeight = FontWeight.ExtraBold
                         )
                     }
@@ -70,6 +83,7 @@ fun SimpleAnimeCard(
             }
         }
         Spacer(modifier = Modifier.height(8.dp))
+        // Anime title with 2-line overflow protection
         Text(
             text = title,
             style = MaterialTheme.typography.titleSmall,

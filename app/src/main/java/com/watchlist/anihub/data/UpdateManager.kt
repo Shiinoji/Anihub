@@ -8,21 +8,29 @@ import kotlinx.coroutines.flow.first
 import javax.inject.Inject
 import javax.inject.Singleton
 
+/**
+ * Manages application update checks by fetching version information from a remote source.
+ * Notifies the user via system and in-app notifications if a newer version is available.
+ */
 @Singleton
 class UpdateManager @Inject constructor(
     private val aniListService: AniListService,
     private val animeDao: AnimeDao,
     private val notificationHelper: NotificationHelper
 ) {
-    // You should replace this with your actual raw JSON URL from GitHub
+    // URL pointing to the raw JSON file containing the latest version metadata
     private val updateUrl = "https://raw.githubusercontent.com/username/repo/main/version.json"
 
+    /**
+     * Checks if a newer version of the app is available on GitHub.
+     * Compares the remote version code with the local [BuildConfig.VERSION_CODE].
+     */
     suspend fun checkForUpdates() {
         try {
             val latestUpdate = aniListService.checkForUpdate(updateUrl)
             
             if (latestUpdate.versionCode > BuildConfig.VERSION_CODE) {
-                // Check if we already notified about this specific version
+                // Prevent duplicate notifications for the same version
                 val existingNotifications = animeDao.getNotifications().first()
                 val alreadyNotified = existingNotifications.any { 
                     it.type == "APP_UPDATE" && it.title.contains(latestUpdate.versionName) 
@@ -31,14 +39,13 @@ class UpdateManager @Inject constructor(
                 if (!alreadyNotified) {
                     val message = latestUpdate.changelog
                     
-                    // Show system notification
-                    notificationHelper.showEpisodeNotification(
-                        "App Update Available: ${latestUpdate.versionName}",
-                        0, // Not an episode
-                        999999 // Fixed ID for app updates
+                    // Trigger system-level update notification
+                    notificationHelper.showUpdateNotification(
+                        "App Update Available",
+                        "AniHub ${latestUpdate.versionName} is here! check the changelog."
                     )
 
-                    // Add to in-app notifications
+                    // Persist notification in the local database for the in-app inbox
                     animeDao.insertNotification(
                         NotificationEntity(
                             type = "APP_UPDATE",
@@ -49,6 +56,7 @@ class UpdateManager @Inject constructor(
                 }
             }
         } catch (e: Exception) {
+            // Silently fail if update check fails (e.g., no internet)
             e.printStackTrace()
         }
     }

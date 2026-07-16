@@ -67,18 +67,6 @@ object AniListQueries {
         }
     """
 
-    const val TOP_RATED = """
-        query (${'$'}page: Int, ${'$'}perPage: Int, ${'$'}isAdult: Boolean) {
-          Page(page: ${'$'}page, perPage: ${'$'}perPage) {
-            media(sort: SCORE_DESC, type: ANIME, isAdult: ${'$'}isAdult) {
-              id
-              title { english romaji native }
-              coverImage { extraLarge large medium }
-            }
-          }
-        }
-    """
-
     const val ALL_TIME_POPULAR = """
         query (${'$'}page: Int, ${'$'}perPage: Int, ${'$'}isAdult: Boolean) {
           Page(page: ${'$'}page, perPage: ${'$'}perPage) {

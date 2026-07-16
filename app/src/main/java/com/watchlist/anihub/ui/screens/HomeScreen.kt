@@ -4,11 +4,10 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -17,12 +16,23 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.watchlist.anihub.R
+import com.watchlist.anihub.data.local.WatchlistStatus
 import com.watchlist.anihub.data.remote.Media
 import com.watchlist.anihub.ui.UiState
 import com.watchlist.anihub.ui.components.SimpleAnimeCard
 import com.watchlist.anihub.ui.components.SimpleAnimeCardSkeleton
+import com.watchlist.anihub.ui.components.ErrorView
 import com.watchlist.anihub.ui.theme.LocalTitleLanguage
 
+/**
+ * The main landing screen of the app. Displays categorized horizontal lists of anime
+ * and an infinite-scrolling vertical grid for general discovery.
+ *
+ * @param onAnimeClick Callback when an anime card is clicked.
+ * @param onNotificationsClick Callback to navigate to the notifications screen.
+ * @param onCalendarClick Callback to navigate to the airing calendar.
+ * @param onSettingsClick Callback to navigate to settings.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
@@ -30,13 +40,16 @@ fun HomeScreen(
     onNotificationsClick: () -> Unit,
     onCalendarClick: () -> Unit,
     onSettingsClick: () -> Unit,
-    viewModel: HomeViewModel = hiltViewModel()
+    viewModel: HomeViewModel = hiltViewModel(),
 ) {
+    // Collecting states from ViewModel
     val trendingState by viewModel.trendingAnime.collectAsState()
     val popularState by viewModel.popularAnime.collectAsState()
     val seasonalState by viewModel.seasonalAnime.collectAsState()
-    val topRatedState by viewModel.topRatedAnime.collectAsState()
-    val allTimePopularState by viewModel.allTimePopular.collectAsState()
+    val discoverAnime by viewModel.discoverAnime.collectAsState()
+    val discoverState by viewModel.discoverState.collectAsState()
+    val watchlistMap by viewModel.watchlistMap.collectAsState()
+    val itemsPerRow by viewModel.homeItemsPerRow.collectAsState()
     val isRefreshing by viewModel.isRefreshing.collectAsState()
 
     Scaffold(
@@ -70,26 +83,107 @@ fun HomeScreen(
                 .fillMaxSize()
                 .padding(padding)
         ) {
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(bottom = 16.dp)
-            ) {
-                item { AnimeSection("Trending Now", trendingState, onAnimeClick, onRetry = { viewModel.refresh() }) }
-                item { AnimeSection("Recommended for You", topRatedState, onAnimeClick, onRetry = { viewModel.refresh() }) }
-                item { AnimeSection("Most Popular", popularState, onAnimeClick, onRetry = { viewModel.refresh() }) }
-                item { AnimeSection("Seasonal Anime", seasonalState, onAnimeClick, onRetry = { viewModel.refresh() }) }
-                item { AnimeSection("Explore More", allTimePopularState, onAnimeClick, onRetry = { viewModel.refresh() }) }
+            val titleLanguage = LocalTitleLanguage.current
+            
+            // Consolidate errors: if any section fails, show a single global error view
+            val states = listOf(trendingState, popularState, seasonalState)
+            val errorState = states.asSequence().filterIsInstance<UiState.Error>().firstOrNull()
+
+            if (errorState != null) {
+                val isConnectionError = errorState.message.contains("network", ignoreCase = true) || 
+                                      errorState.message.contains("internet", ignoreCase = true) ||
+                                      errorState.message.contains("connection", ignoreCase = true)
+                
+                ErrorView(
+                    message = errorState.message,
+                    onRetry = { viewModel.refresh() },
+                    icon = if (isConnectionError) {
+                        ImageVector.vectorResource(R.drawable.wifi_off)
+                    } else {
+                        ImageVector.vectorResource(R.drawable.triangle_alert)
+                    }
+                )
+            } else {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(bottom = 16.dp)
+                ) {
+                    // Standard horizontal sections
+                    item { AnimeSection("Trending Now", trendingState, onAnimeClick, watchlistMap) }
+                    item { AnimeSection("Most Popular", popularState, onAnimeClick, watchlistMap) }
+                    item { AnimeSection("Seasonal Anime", seasonalState, onAnimeClick, watchlistMap) }
+
+                    // Discover Vertical Grid Section
+                    item {
+                        Text(
+                            text = "Discover",
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 16.dp)
+                        )
+                    }
+
+                    // Chunking the discover list for a custom grid implementation in LazyColumn
+                    val chunkedList = discoverAnime.chunked(itemsPerRow)
+                    
+                    itemsIndexed(chunkedList) { index, rowItems ->
+                        // Pagination trigger: load more when reaching the end
+                        if (index >= (chunkedList.size - 2)) {
+                            LaunchedEffect(Unit) {
+                                viewModel.loadDiscoverNextPage()
+                            }
+                        }
+                        
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 8.dp),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            rowItems.forEach { anime ->
+                                SimpleAnimeCard(
+                                    title = anime.title.getDisplayTitle(titleLanguage),
+                                    imageUrl = anime.coverImage.extraLarge ?: anime.coverImage.large ?: "",
+                                    onClick = { onAnimeClick(anime.id) },
+                                    status = watchlistMap[anime.id]?.getDisplayName(),
+                                    modifier = Modifier.weight(1f)
+                                )
+                            }
+                            // Filler spacers for incomplete rows (last page)
+                            repeat(itemsPerRow - rowItems.size) {
+                                Spacer(modifier = Modifier.weight(1f))
+                            }
+                        }
+                    }
+
+                    // Loading indicator for pagination
+                    if (discoverState is UiState.Loading && discoverAnime.isNotEmpty()) {
+                        item {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(16.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                CircularProgressIndicator(modifier = Modifier.size(32.dp))
+                            }
+                        }
+                    }
+                }
             }
         }
     }
 }
 
+/**
+ * A reusable horizontal section showing a category of anime.
+ */
 @Composable
 fun AnimeSection(
     title: String,
     state: UiState<List<Media>>,
     onAnimeClick: (Int) -> Unit,
-    onRetry: () -> Unit
+    watchlistMap: Map<Int, WatchlistStatus> = emptyMap()
 ) {
     val titleLanguage = LocalTitleLanguage.current
     Column(modifier = Modifier.padding(vertical = 8.dp)) {
@@ -119,33 +213,13 @@ fun AnimeSection(
                             title = anime.title.getDisplayTitle(titleLanguage),
                             imageUrl = anime.coverImage.extraLarge ?: anime.coverImage.large ?: "",
                             onClick = { onAnimeClick(anime.id) },
+                            status = watchlistMap[anime.id]?.getDisplayName(),
                             modifier = Modifier.width(140.dp)
                         )
                     }
                 }
             }
-            is UiState.Error -> {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(200.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Icon(
-                            imageVector = ImageVector.vectorResource(R.drawable.wifi_off),
-                            contentDescription = null,
-                            modifier = Modifier.size(48.dp),
-                            tint = MaterialTheme.colorScheme.error.copy(alpha = 0.6f)
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(state.message, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.error)
-                        TextButton(onClick = onRetry) {
-                            Text("Retry")
-                        }
-                    }
-                }
-            }
+            else -> {}
         }
     }
 }

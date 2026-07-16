@@ -3,6 +3,7 @@ package com.watchlist.anihub.di
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import com.watchlist.anihub.data.remote.AniListService
+import com.watchlist.anihub.data.remote.GitHubReleaseApi
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -59,5 +60,16 @@ object NetworkModule {
     @Singleton
     fun provideAniListService(retrofit: Retrofit): AniListService {
         return retrofit.create(AniListService::class.java)
+    }
+
+    @Provides
+    @Singleton
+    fun provideGitHubReleaseApi(okHttpClient: OkHttpClient, moshi: Moshi): GitHubReleaseApi {
+        return Retrofit.Builder()
+            .baseUrl("https://api.github.com/repos/Shiinoji/Anihub/releases/")
+            .client(okHttpClient)
+            .addConverterFactory(MoshiConverterFactory.create(moshi))
+            .build()
+            .create(GitHubReleaseApi::class.java)
     }
 }

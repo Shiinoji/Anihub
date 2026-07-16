@@ -1,9 +1,12 @@
 package com.watchlist.anihub.ui.screens
 
 import androidx.compose.animation.animateContentSize
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -44,7 +47,16 @@ import com.watchlist.anihub.ui.theme.LocalScoreFormat
 import com.watchlist.anihub.ui.theme.LocalShowAiringCountdown
 import com.watchlist.anihub.ui.theme.LocalTitleLanguage
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
+/**
+ * Screen displaying comprehensive details about a specific anime, including characters,
+ * recommendations, and trailer. Allows users to manage the anime in their watchlist.
+ *
+ * @param animeId The ID of the anime to display.
+ * @param onBackClick Callback to navigate back.
+ * @param onAnimeClick Callback to navigate to another anime's details (e.g., from recommendations).
+ * @param onCharacterClick Callback to navigate to character details.
+ */
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class, ExperimentalFoundationApi::class)
 @Composable
 fun AnimeDetailScreen(
     animeId: Int,
@@ -59,11 +71,12 @@ fun AnimeDetailScreen(
     val watchlistStatus by viewModel.watchlistStatus.collectAsState()
     val isRefreshing by viewModel.isRefreshing.collectAsState()
     
+    var showImageViewer by remember { mutableStateOf(false) }
+
     LaunchedEffect(animeId) {
         viewModel.fetchAnimeDetail(animeId)
     }
     
-    //pull to refresh
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background
     ) { padding ->
@@ -76,7 +89,7 @@ fun AnimeDetailScreen(
         ) {
             when (val state = animeState) {
                 is UiState.Loading -> {
-                    AnimeDetailSkeleton()
+                    AnimeDetailSkeleton() // Display pulse loading effect
                 }
                 is UiState.Success<*> -> {
                     val media = state.data as Media
@@ -85,6 +98,8 @@ fun AnimeDetailScreen(
                     val metadataColorSecondary = metadataColor.copy(alpha = 0.8f)
                     
                     val scrollState = rememberLazyListState()
+                    
+                    // Logic to show/hide the sticky frosted glass header based on scroll position
                     val showStickyHeader by remember {
                         derivedStateOf {
                             scrollState.firstVisibleItemIndex > 0 || scrollState.firstVisibleItemScrollOffset > 200
@@ -98,14 +113,14 @@ fun AnimeDetailScreen(
                             modifier = Modifier.fillMaxSize(),
                             state = scrollState
                         ) {
-                            // Blurred Background & Banner
+                            // Section 1: Visual Header with Blurred Background
                             item {
                                 Box(
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .height(320.dp)
                                 ) {
-                                    // Blurred Cover Background
+                                    // Ambient background effect using the anime's cover image
                                     AsyncImage(
                                         model = media.coverImage.extraLarge ?: media.coverImage.large,
                                         contentDescription = null,
@@ -114,7 +129,7 @@ fun AnimeDetailScreen(
                                             .blur(20.dp),
                                         contentScale = ContentScale.Crop
                                     )
-                                    // Gradient Overlay
+                                    // Modern gradient overlay for readability and depth
                                     Box(
                                         modifier = Modifier
                                             .fillMaxSize()
@@ -136,7 +151,7 @@ fun AnimeDetailScreen(
                                     ) {
                                         Spacer(modifier = Modifier.height(72.dp))
 
-                                        // Metadata Header
+                                        // Anime Poster and high-level metadata (Type, Status, Episodes, Score)
                                         Row(
                                             modifier = Modifier
                                                 .padding(horizontal = 16.dp)
@@ -150,12 +165,24 @@ fun AnimeDetailScreen(
                                                     .width(130.dp)
                                                     .height(190.dp)
                                                     .border(2.dp, MaterialTheme.colorScheme.surface, RoundedCornerShape(12.dp))
+                                                    .combinedClickable(
+                                                        onClick = { /* Standard click could do something else or nothing */ },
+                                                        onLongClick = { showImageViewer = true }
+                                                    )
                                             ) {
                                                 AsyncImage(
                                                     model = media.coverImage.extraLarge ?: media.coverImage.large,
                                                     contentDescription = null,
                                                     modifier = Modifier.fillMaxSize(),
                                                     contentScale = ContentScale.Crop
+                                                )
+                                            }
+
+                                            if (showImageViewer) {
+                                                ImageViewerDialog(
+                                                    imageUrl = media.coverImage.extraLarge ?: media.coverImage.large ?: "",
+                                                    title = media.title.displayTitle,
+                                                    onDismiss = { showImageViewer = false }
                                                 )
                                             }
                                             Column(
@@ -177,29 +204,15 @@ fun AnimeDetailScreen(
                                                 )
                                                 Spacer(modifier = Modifier.height(8.dp))
                                                 
-                                                // Type and Status Chips/Rows
                                                 Row(verticalAlignment = Alignment.CenterVertically) {
-                                                    Text(
-                                                        text = "Type: ",
-                                                        style = MaterialTheme.typography.bodyMedium,
-                                                        color = metadataColorSecondary
-                                                    )
-                                                    Text(
-                                                        text = media.format ?: "Unknown",
-                                                        style = MaterialTheme.typography.bodyMedium,
-                                                        color = metadataColorSecondary,
-                                                        fontWeight = FontWeight.Bold
-                                                    )
+                                                    Text("Type: ", style = MaterialTheme.typography.bodyMedium, color = metadataColorSecondary)
+                                                    Text(media.format ?: "Unknown", style = MaterialTheme.typography.bodyMedium, color = metadataColorSecondary, fontWeight = FontWeight.Bold)
                                                 }
                                                 
                                                 Spacer(modifier = Modifier.height(4.dp))
 
                                                 Row(verticalAlignment = Alignment.CenterVertically) {
-                                                    Text(
-                                                        text = "Status: ",
-                                                        style = MaterialTheme.typography.bodyMedium,
-                                                        color = metadataColorSecondary
-                                                    )
+                                                    Text("Status: ", style = MaterialTheme.typography.bodyMedium, color = metadataColorSecondary)
                                                     Surface(
                                                         color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.1f),
                                                         shape = RoundedCornerShape(4.dp)
@@ -224,6 +237,7 @@ fun AnimeDetailScreen(
                                                 
                                                 Text("Score: ${media.getFormattedScore(scoreFormat)}", style = MaterialTheme.typography.bodyMedium, color = metadataColorSecondary)
                                                 
+                                                // Airing countdown alert for ongoing series
                                                 if (showCountdown && media.nextAiringEpisode != null) {
                                                     Spacer(modifier = Modifier.height(4.dp))
                                                     Text(
@@ -239,15 +253,11 @@ fun AnimeDetailScreen(
                                 }
                             }
 
-                            // Description of the Anime Display
+                            // Section 2: Expandable Description and Genre Chips
                             item {
                                 var expanded by remember { mutableStateOf(false) }
                                 Column(modifier = Modifier.padding(16.dp)) {
-                                    Text(
-                                        text = "Description",
-                                        style = MaterialTheme.typography.titleMedium,
-                                        fontWeight = FontWeight.Bold
-                                    )
+                                    Text(text = "Description", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                                     Spacer(modifier = Modifier.height(4.dp))
                                     Text(
                                         text = media.description.cleanDescription().ifEmpty { "No description available" },
@@ -259,7 +269,6 @@ fun AnimeDetailScreen(
                                             .clickable { expanded = !expanded }
                                     )
 
-                                    // Genres
                                     val genresList = media.genres
                                     if (!genresList.isNullOrEmpty()) {
                                         Spacer(modifier = Modifier.height(12.dp))
@@ -269,35 +278,34 @@ fun AnimeDetailScreen(
                                             verticalArrangement = Arrangement.spacedBy(8.dp)
                                         ) {
                                             for (genre in genresList) {
-                                                SuggestionChip(
-                                                    onClick = { /* TODO: Filter by genre */ },
-                                                    label = { Text(genre, style = MaterialTheme.typography.labelSmall) },
+                                                Surface(
+                                                    color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f),
                                                     shape = RoundedCornerShape(16.dp),
-                                                    colors = SuggestionChipDefaults.suggestionChipColors(
-                                                        containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f),
-                                                        labelColor = MaterialTheme.colorScheme.onPrimaryContainer
-                                                    ),
-                                                    border = null
-                                                )
+                                                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                                                ) {
+                                                    Text(
+                                                        text = genre,
+                                                        style = MaterialTheme.typography.labelMedium,
+                                                        color = MaterialTheme.colorScheme.onSecondaryContainer,
+                                                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                                                    )
+                                                }
                                             }
                                         }
                                     }
                                 }
                             }
 
-                            // Watchlist Status Selector
+                            // Section 3: Watchlist Status (Visible only if anime is in collection)
                             if (isInWatchlist) {
                                 item {
                                     Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
-                                        Text(
-                                            text = "Watchlist Status",
-                                            style = MaterialTheme.typography.titleMedium,
-                                            fontWeight = FontWeight.Bold
-                                        )
+                                        Text(text = "Watchlist Status", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                                         Spacer(modifier = Modifier.height(8.dp))
-                                        Row(
+                                        FlowRow(
                                             modifier = Modifier.fillMaxWidth(),
-                                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                            verticalArrangement = Arrangement.spacedBy(8.dp)
                                         ) {
                                             WatchlistStatus.entries.forEach { status ->
                                                 FilterChip(
@@ -318,23 +326,16 @@ fun AnimeDetailScreen(
                                 }
                             }
 
-                            // YouTube and DailyMotion External trailer redirect
+                            // Section 4: Video Trailer
                             val trailer = media.trailer
                             if (trailer != null && trailer.url != null) {
                                 item {
                                     Column(modifier = Modifier.padding(16.dp)) {
-                                        Text(
-                                            text = "Trailer",
-                                            style = MaterialTheme.typography.titleMedium,
-                                            fontWeight = FontWeight.Bold
-                                        )
+                                        Text(text = "Trailer", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                                         Spacer(modifier = Modifier.height(8.dp))
                                         val uriHandler = LocalUriHandler.current
                                         Card(
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .height(200.dp)
-                                                .clickable { uriHandler.openUri(trailer.url!!) },
+                                            modifier = Modifier.fillMaxWidth().height(200.dp).clickable { uriHandler.openUri(trailer.url!!) },
                                             shape = RoundedCornerShape(12.dp)
                                         ) {
                                             Box(modifier = Modifier.fillMaxSize()) {
@@ -344,20 +345,12 @@ fun AnimeDetailScreen(
                                                     modifier = Modifier.fillMaxSize(),
                                                     contentScale = ContentScale.Crop
                                                 )
-                                                // Play Icon Overlay for trailer
+                                                // Play overlay
                                                 Box(
-                                                    modifier = Modifier
-                                                        .size(64.dp)
-                                                        .align(Alignment.Center)
-                                                        .background(Color.Black.copy(alpha = 0.6f), CircleShape),
+                                                    modifier = Modifier.size(64.dp).align(Alignment.Center).background(Color.Black.copy(alpha = 0.6f), CircleShape),
                                                     contentAlignment = Alignment.Center
                                                 ) {
-                                                    Icon(
-                                                        imageVector = Icons.Default.PlayArrow,
-                                                        contentDescription = null,
-                                                        tint = Color.White,
-                                                        modifier = Modifier.size(32.dp)
-                                                    )
+                                                    Icon(imageVector = Icons.Default.PlayArrow, contentDescription = null, tint = Color.White, modifier = Modifier.size(32.dp))
                                                 }
                                             }
                                         }
@@ -365,69 +358,37 @@ fun AnimeDetailScreen(
                                 }
                             }
 
-                            // Anime Characters
+                            // Section 5: Characters Horizontal List
                             val charactersNodes = media.characters?.nodes
                             if (!charactersNodes.isNullOrEmpty()) {
                                 item {
-                                    Text(
-                                        text = "Characters",
-                                        style = MaterialTheme.typography.titleMedium,
-                                        fontWeight = FontWeight.Bold,
-                                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-                                    )
-                                    LazyRow(
-                                        contentPadding = PaddingValues(horizontal = 16.dp),
-                                        horizontalArrangement = Arrangement.spacedBy(16.dp)
-                                    ) {
+                                    Text(text = "Characters", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
+                                    LazyRow(contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                                         items(charactersNodes) { character ->
-                                            Column(
-                                                horizontalAlignment = Alignment.CenterHorizontally,
-                                                modifier = Modifier
-                                                    .width(80.dp)
-                                                    .clickable { onCharacterClick(character.id) }
-                                            ) {
+                                            Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.width(80.dp).clickable { onCharacterClick(character.id) }) {
                                                 AsyncImage(
                                                     model = character.image.large,
                                                     contentDescription = null,
-                                                    modifier = Modifier
-                                                        .size(70.dp)
-                                                        .clip(CircleShape),
+                                                    modifier = Modifier.size(70.dp).clip(CircleShape),
                                                     contentScale = ContentScale.Crop
                                                 )
-                                                Text(
-                                                    text = character.name.full ?: "",
-                                                    style = MaterialTheme.typography.labelSmall,
-                                                    maxLines = 1,
-                                                    overflow = TextOverflow.Ellipsis,
-                                                    modifier = Modifier.padding(top = 4.dp)
-                                                )
+                                                Text(text = character.name.full ?: "", style = MaterialTheme.typography.labelSmall, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 4.dp))
                                             }
                                         }
                                     }
                                 }
                             }
 
-                            // Recommendations below of the staff
+                            // Section 6: Recommended Anime Horizontal List
                             val recommendationsNodes = media.recommendations?.nodes
                             if (!recommendationsNodes.isNullOrEmpty()) {
                                 item {
-                                    Text(
-                                        text = "Recommendation",
-                                        style = MaterialTheme.typography.titleMedium,
-                                        fontWeight = FontWeight.Bold,
-                                        modifier = Modifier.padding(16.dp)
-                                    )
-                                    LazyRow(
-                                        contentPadding = PaddingValues(horizontal = 16.dp),
-                                        horizontalArrangement = Arrangement.spacedBy(12.dp)
-                                    ) {
+                                    Text(text = "Recommendation", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, modifier = Modifier.padding(16.dp))
+                                    LazyRow(contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                                         items(recommendationsNodes) { rec ->
                                             val recommendedMedia = rec.mediaRecommendation
                                             if (recommendedMedia != null) {
-                                                AnimeCard(
-                                                    media = recommendedMedia,
-                                                    onClick = { onAnimeClick(recommendedMedia.id) }
-                                                )
+                                                AnimeCard(media = recommendedMedia, onClick = { onAnimeClick(recommendedMedia.id) })
                                             }
                                         }
                                     }
@@ -435,11 +396,11 @@ fun AnimeDetailScreen(
                             }
                         }
 
-                        // Header Overlay (Sticky Top)
+                        // Floating Sticky Header (Back button and Watchlist/Favorite controls)
                         Box(
                             modifier = Modifier.fillMaxWidth()
                         ) {
-                            // Frosted Glass Blur Header Background (appears on scroll)
+                            // Blurred glass effect revealed on scroll
                             androidx.compose.animation.AnimatedVisibility(
                                 visible = showStickyHeader,
                                 enter = androidx.compose.animation.fadeIn(),
@@ -473,9 +434,7 @@ fun AnimeDetailScreen(
                                     tint = metadataColor
                                 )
 
-                                Row(
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                ) {
+                                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                     HeaderIconButton(
                                         icon = if (isFavorite) Icons.Default.Favorite else Icons.Outlined.FavoriteBorder,
                                         onClick = { viewModel.toggleFavorite() },
@@ -492,9 +451,17 @@ fun AnimeDetailScreen(
                     }
                 }
                 is UiState.Error -> {
+                    val isConnectionError = state.message.contains("network", ignoreCase = true) || 
+                                          state.message.contains("internet", ignoreCase = true) ||
+                                          state.message.contains("connection", ignoreCase = true)
                     ErrorView(
                         message = state.message,
-                        onRetry = { viewModel.refresh(animeId) }
+                        onRetry = { viewModel.refresh(animeId) },
+                        icon = if (isConnectionError) {
+                            ImageVector.vectorResource(R.drawable.wifi_off)
+                        } else {
+                            ImageVector.vectorResource(R.drawable.triangle_alert)
+                        }
                     )
                 }
             }

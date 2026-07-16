@@ -27,6 +27,13 @@ import com.watchlist.anihub.ui.components.AiringAnimeRowSkeleton
 import java.text.SimpleDateFormat
 import java.util.*
 
+/**
+ * Screen displaying the upcoming anime airing schedule.
+ * Users can pick a date from a horizontal list to see what airs on that specific day.
+ *
+ * @param onBackClick Callback to navigate back.
+ * @param onAnimeClick Callback when an airing anime is clicked to view its details.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CalendarScreen(
@@ -64,7 +71,7 @@ fun CalendarScreen(
                 .padding(padding)
         ) {
             Column(modifier = Modifier.fillMaxSize()) {
-                // Horizontal Date Picker
+                // Horizontal Date Selection Ribbon
                 LazyRow(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -82,6 +89,7 @@ fun CalendarScreen(
                 }
 
                 if (schedule.isEmpty()) {
+                    // Handling Loading and Empty states
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         if (isRefreshing) {
                             LazyColumn(
@@ -90,9 +98,7 @@ fun CalendarScreen(
                                 verticalArrangement = Arrangement.spacedBy(12.dp),
                                 userScrollEnabled = false
                             ) {
-                                items(8) {
-                                    AiringAnimeRowSkeleton()
-                                }
+                                items(8) { AiringAnimeRowSkeleton() }
                             }
                         } else {
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -112,6 +118,7 @@ fun CalendarScreen(
                         }
                     }
                 } else {
+                    // Vertical list of anime airing on the chosen day
                     LazyColumn(
                         modifier = Modifier.fillMaxSize(),
                         contentPadding = PaddingValues(16.dp),
@@ -127,6 +134,9 @@ fun CalendarScreen(
     }
 }
 
+/**
+ * A selectable chip representing a single day in the calendar.
+ */
 @Composable
 fun DateChip(
     date: Calendar,
@@ -162,6 +172,9 @@ fun DateChip(
     }
 }
 
+/**
+ * A row item representing a specific anime airing event.
+ */
 @Composable
 fun AiringAnimeRow(
     airing: AiringScheduleEntity,
@@ -234,6 +247,9 @@ fun AiringAnimeRow(
     }
 }
 
+/**
+ * Compares two Calendar instances to determine if they represent the same day.
+ */
 private fun isSameDay(cal1: Calendar, cal2: Calendar): Boolean {
     return cal1.get(Calendar.YEAR) == cal2.get(Calendar.YEAR) &&
            cal1.get(Calendar.DAY_OF_YEAR) == cal2.get(Calendar.DAY_OF_YEAR)

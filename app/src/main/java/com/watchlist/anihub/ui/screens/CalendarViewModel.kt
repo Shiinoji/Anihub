@@ -15,6 +15,10 @@ import java.util.*
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 
+/**
+ * ViewModel for the Airing Calendar screen, responsible for fetching upcoming anime schedules
+ * and providing daily schedules for the user to browse.
+ */
 @OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class CalendarViewModel @Inject constructor(
@@ -26,16 +30,21 @@ class CalendarViewModel @Inject constructor(
     val isRefreshing = _isRefreshing.asStateFlow()
 
     private val _selectedDate = MutableStateFlow(Calendar.getInstance())
+    /**
+     * Currently selected date in the horizontal date picker.
+     */
     val selectedDate = _selectedDate.asStateFlow()
 
     init {
         refresh()
     }
 
+    /**
+     * List of dates available for selection (Today + next 6 days).
+     */
     val availableDates: StateFlow<List<Calendar>> = flow {
         val dates = mutableListOf<Calendar>()
         val cal = Calendar.getInstance()
-        // Show 7 days (today + next 6 days)
         repeat(7) {
             val date = cal.clone() as Calendar
             dates.add(date)
@@ -44,6 +53,10 @@ class CalendarViewModel @Inject constructor(
         emit(dates)
     }.stateIn(viewModelScope, SharingStarted.Eagerly, listOf(Calendar.getInstance()))
 
+    /**
+     * Observable flow of anime airing on the [selectedDate].
+     * Uses flatMapLatest to reactively update when the user selects a different date.
+     */
     val airingSchedule: StateFlow<List<AiringScheduleEntity>> = _selectedDate
         .flatMapLatest { selectedCal ->
             val startOfDay = (selectedCal.clone() as Calendar).apply {
@@ -68,15 +81,21 @@ class CalendarViewModel @Inject constructor(
             initialValue = emptyList()
         )
 
+    /**
+     * Updates the UI to show anime for a specific day.
+     */
     fun selectDate(calendar: Calendar) {
         _selectedDate.value = calendar
     }
 
+    /**
+     * Refreshes the local airing cache by fetching the next 14 days of data from AniList.
+     */
     fun refresh() {
         viewModelScope.launch {
             _isRefreshing.value = true
             try {
-                // Fetch from the start of today to ensure we have all data for the current day
+                // Determine the fetch window: From today's midnight up to 14 days in the future
                 val start = (Calendar.getInstance().apply {
                     set(Calendar.HOUR_OF_DAY, 0)
                     set(Calendar.MINUTE, 0)
@@ -87,7 +106,7 @@ class CalendarViewModel @Inject constructor(
                 
                 val allSchedules = mutableListOf<AiringScheduleEntity>()
                 
-                // Fetch up to 6 pages to get more airing data
+                // Paginated fetch to populate the local database
                 for (page in 1..6) {
                     val response = aniListService.getAnimeList(
                         GraphQLRequest(
@@ -111,7 +130,6 @@ class CalendarViewModel @Inject constructor(
 
                     if (schedules.isEmpty()) break
                     allSchedules.addAll(schedules)
-                    // If we have fewer than 50 items, it means there are no more pages
                     if (schedules.size < 50) break
                 }
 

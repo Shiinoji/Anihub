@@ -1,12 +1,10 @@
 package com.watchlist.anihub.ui.screens
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
@@ -26,12 +24,12 @@ import com.watchlist.anihub.data.local.AnimeEntity
 import com.watchlist.anihub.data.local.WatchlistStatus
 import com.watchlist.anihub.ui.components.SimpleAnimeCard
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun WatchlistScreen(
     onBackClick: () -> Unit,
     onAnimeClick: (Int) -> Unit,
-    viewModel: WatchlistViewModel = hiltViewModel()
+    viewModel: WatchlistViewModel = hiltViewModel(),
 ) {
     var selectedTab by remember { mutableIntStateOf(0) }
     val tabs = listOf("Watchlist", "Favorites")
@@ -41,11 +39,11 @@ fun WatchlistScreen(
     val filterStatus by viewModel.filterStatus.collectAsState()
     val sortOrder by viewModel.sortOrder.collectAsState()
     val itemsPerRow by viewModel.itemsPerRow.collectAsState()
-    
+
     val currentList = if (selectedTab == 0) watchlist else favorites
 
     var animeToDelete by remember { mutableStateOf<AnimeEntity?>(null) }
-    var showFilterSheet by remember { mutableStateOf(false) }
+    var showFilterSheet by remember { mutableStateOf(value = false) }
 
     if (animeToDelete != null) {
         AlertDialog(
@@ -92,9 +90,10 @@ fun WatchlistScreen(
                 if (selectedTab == 0) {
                     Text("Filter by Status", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                     Spacer(modifier = Modifier.height(8.dp))
-                    Row(
+                    FlowRow(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         WatchlistStatus.entries.forEach { status ->
                             FilterChip(
@@ -115,16 +114,17 @@ fun WatchlistScreen(
                 // Sort Section
                 Text("Sort Order", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                 Spacer(modifier = Modifier.height(8.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                FlowRow(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     WatchlistSort.entries.forEach { sort ->
                         FilterChip(
                             selected = sortOrder == sort,
                             onClick = { viewModel.setSortOrder(sort) },
                             label = { 
-                                Text(when(sort) {
+                                Text(when (sort) {
                                     WatchlistSort.ALPHABETICAL -> "A-Z"
                                     WatchlistSort.LAST_ADDED -> "Last Added"
                                     WatchlistSort.DATE_ADDED -> "Date Added"
@@ -152,10 +152,10 @@ fun WatchlistScreen(
             TopAppBar(
                 title = { 
                     Text(
-                        "Watchlist", 
+                        "Watchlist",
                         style = MaterialTheme.typography.headlineSmall,
                         fontWeight = FontWeight.Bold
-                    ) 
+                    )
                 },
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {

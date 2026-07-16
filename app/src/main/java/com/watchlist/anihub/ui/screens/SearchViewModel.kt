@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.watchlist.anihub.data.ThemeManager
 import com.watchlist.anihub.data.remote.*
+import com.watchlist.anihub.data.local.AnimeDao
 import com.watchlist.anihub.ui.UiState
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
@@ -11,11 +12,23 @@ import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+/**
+ * ViewModel for the Search screen, handling complex filtering and sorting logic
+ * for discovering anime through the AniList API.
+ */
 @HiltViewModel
 class SearchViewModel @Inject constructor(
     private val aniListService: AniListService,
-    private val themeManager: ThemeManager
+    private val themeManager: ThemeManager,
+    private val animeDao: AnimeDao,
 ) : ViewModel() {
+
+    /**
+     * Map of anime IDs in the watchlist for displaying status badges on search results.
+     */
+    val watchlistMap = animeDao.getWatchlist().map { list ->
+        list.associateBy({ it.id }, { it.status })
+    }.stateIn(viewModelScope, SharingStarted.Lazily, emptyMap())
 
     private val _searchResults = MutableStateFlow<UiState<List<Media>>>(UiState.Success(emptyList()))
     val searchResults = _searchResults.asStateFlow()
@@ -24,6 +37,9 @@ class SearchViewModel @Inject constructor(
     val searchQuery = _searchQuery.asStateFlow()
 
     private val _genres = MutableStateFlow<List<String>>(emptyList())
+    /**
+     * List of available genres fetched from the API for the filter sheet.
+     */
     val genres = _genres.asStateFlow()
 
     private val _selectedGenre = MutableStateFlow<String?>(null)
@@ -56,6 +72,9 @@ class SearchViewModel @Inject constructor(
         val sort: String
     )
 
+    /**
+     * Fetches the full list of genres from AniList to populate the filter options.
+     */
     private fun fetchGenres() {
         viewModelScope.launch {
             try {
@@ -68,6 +87,7 @@ class SearchViewModel @Inject constructor(
         }
     }
 
+    // Filter selection methods
     fun selectGenre(genre: String?) {
         _selectedGenre.value = genre
         performSearch()
@@ -93,15 +113,25 @@ class SearchViewModel @Inject constructor(
         performSearch()
     }
 
+    /**
+     * Updates the search query string. Does not trigger search automatically.
+     */
     fun onQueryChange(query: String) {
         _searchQuery.value = query
     }
 
+    /**
+     * Triggers a search with the current query and filters.
+     */
     fun onSearchExplicit(query: String) {
         _searchQuery.value = query
         performSearch()
     }
 
+    /**
+     * Executes the search API call based on current parameters.
+     * Cancels any previous pending search job.
+     */
     private fun performSearch() {
         val params = SearchParameters(
             _searchQuery.value,
@@ -112,7 +142,12 @@ class SearchViewModel @Inject constructor(
             _selectedSort.value
         )
 
-        if (params.query.isBlank() && params.genre == null && params.year == null && params.season == null && params.status == null) {
+        // Clear results if search is empty
+        if (params.query.isBlank() && 
+            params.genre == null && 
+            params.year == null && 
+            params.season == null && 
+            params.status == null) {
             _searchResults.value = UiState.Success(emptyList())
             return
         }
@@ -122,7 +157,7 @@ class SearchViewModel @Inject constructor(
             _searchResults.value = UiState.Loading
             try {
                 val isAdult = themeManager.adultContent.first()
-                val variables = mutableMapOf<String, Any>(
+                val variables = mutableMapOf(
                     "isAdult" to isAdult,
                     "sort" to listOf(params.sort)
                 )

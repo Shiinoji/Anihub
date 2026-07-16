@@ -15,6 +15,10 @@ import dagger.assisted.AssistedInject
 import kotlinx.coroutines.flow.first
 import java.util.concurrent.TimeUnit
 
+/**
+ * Background worker that periodically syncs airing schedules, checks for new episodes
+ * of watched anime, discovers trending releases, and checks for app updates.
+ */
 @HiltWorker
 class NotificationWorker @AssistedInject constructor(
     @Assisted context: Context,
@@ -26,60 +30,76 @@ class NotificationWorker @AssistedInject constructor(
     private val themeManager: ThemeManager
 ) : CoroutineWorker(context, workerParams) {
 
+    /**
+     * Primary background task execution. 
+     * Performs a series of synchronization and checking operations.
+     */
     override suspend fun doWork(): Result {
         try {
-            // Respect notification settings
+            // Check if user has enabled notifications in settings
             if (!themeManager.notificationsEnabled.first()) return Result.success()
 
-            // Check for App Updates via GitHub
+            // 1. Check for remote App Updates
             updateManager.checkForUpdates()
 
-            // Fetch Airing Schedule (2 weeks ahead)
+            // 2. Refresh local Airing Schedule (2-week window)
             fetchAiringSchedule()
 
             val watchlist = animeDao.getWatchlist().first()
             if (watchlist.isEmpty()) return Result.success()
 
-            val ids = watchlist.map { it.id }
-            val response = aniListService.getAnimeList(
-                GraphQLRequest(AniListQueries.AIRING_CHECK, mapOf("ids" to ids))
-            )
+            // 3. Check for new episodes of anime in the user's watchlist
+            // Chunk watchlist check in groups of 50 to handle large collections reliably
+            watchlist.chunked(50).forEach { chunk ->
+                val ids = chunk.map { it.id }
+                val response = aniListService.getAnimeList(
+                    GraphQLRequest(AniListQueries.AIRING_CHECK, mapOf("ids" to ids))
+                )
 
-            response.data?.page?.media?.forEach { media ->
-                val localAnime = watchlist.find { it.id == media.id } ?: return@forEach
-                val currentEpisode = media.nextAiringEpisode?.episode?.minus(1) ?: 0
-                
-                if (currentEpisode > localAnime.lastNotifiedEpisode && currentEpisode > 0) {
-                    notificationHelper.showEpisodeNotification(
-                        animeTitle = media.title.displayTitle,
-                        episodeNumber = currentEpisode,
-                        animeId = media.id
-                    )
-                    // Add to in-app notifications
-                    animeDao.insertNotification(
-                        NotificationEntity(
-                            type = "EPISODE",
-                            title = "New Episode: ${media.title.displayTitle}",
-                            message = "Episode $currentEpisode is now available!",
-                            animeId = media.id,
-                            imageUrl = media.coverImage.medium
+                response.data?.page?.media?.forEach { media ->
+                    val localAnime = watchlist.find { it.id == media.id } ?: return@forEach
+                    
+                    // nextAiringEpisode is null for finished anime or those between seasons
+                    val currentEpisode = media.nextAiringEpisode?.episode?.minus(1) 
+                        ?: if (media.status == "FINISHED") media.episodes ?: 0 else 0
+                    
+                    // Notify only if a new episode has aired since the last check
+                    if (currentEpisode > localAnime.lastNotifiedEpisode && currentEpisode > 0) {
+                        notificationHelper.showEpisodeNotification(
+                            animeTitle = media.title.displayTitle,
+                            episodeNumber = currentEpisode,
+                            animeId = media.id
                         )
-                    )
-                    // Update last notified episode
-                    animeDao.insertAnime(localAnime.copy(lastNotifiedEpisode = currentEpisode))
+                        // Persist notification for the in-app inbox
+                        animeDao.insertNotification(
+                            NotificationEntity(
+                                type = "EPISODE",
+                                title = "New Episode: ${media.title.displayTitle}",
+                                message = "Episode $currentEpisode is now available!",
+                                animeId = media.id,
+                                imageUrl = media.coverImage.medium
+                            )
+                        )
+                        // Sync the last notified episode locally to prevent duplicate alerts
+                        animeDao.insertAnime(localAnime.copy(lastNotifiedEpisode = currentEpisode))
+                    }
                 }
             }
 
-            // Check for new anime release (e.g. check trending)
+            // 4. Discover and notify about globally trending releases
             checkNewReleases()
 
             return Result.success()
         } catch (e: Exception) {
             e.printStackTrace()
+            // Allow WorkManager to reschedule the task later if a network error occurred
             return Result.retry()
         }
     }
 
+    /**
+     * Fetches the upcoming 14-day airing schedule from AniList and caches it locally.
+     */
     private suspend fun fetchAiringSchedule() {
         try {
             val start = (java.util.Calendar.getInstance().apply {
@@ -92,7 +112,7 @@ class NotificationWorker @AssistedInject constructor(
             
             val allSchedules = mutableListOf<AiringScheduleEntity>()
             
-            // Fetch up to 6 pages to get more airing data
+            // Paginate through AniList response to capture full schedule
             for (page in 1..6) {
                 val response = aniListService.getAnimeList(
                     GraphQLRequest(
@@ -119,7 +139,7 @@ class NotificationWorker @AssistedInject constructor(
 
             if (allSchedules.isNotEmpty()) {
                 animeDao.insertAiringSchedules(allSchedules)
-                // Clean up old schedules (older than 2 days ago)
+                // Purge stale data older than 2 days
                 animeDao.deleteOldSchedules(start - TimeUnit.DAYS.toSeconds(2))
             }
         } catch (e: Exception) {
@@ -127,6 +147,9 @@ class NotificationWorker @AssistedInject constructor(
         }
     }
 
+    /**
+     * Checks for trending anime releases and notifies the user if it's not already in their watchlist.
+     */
     private suspend fun checkNewReleases() {
         try {
             val response = aniListService.getAnimeList(
@@ -136,14 +159,12 @@ class NotificationWorker @AssistedInject constructor(
             
             response.data?.page?.media?.forEach { media ->
                 if (!watchlistIds.contains(media.id)) {
-                    // Check if we've already notified about this trending anime
+                    // Only notify if this is a fresh recommendation the user hasn't seen
                     if (!animeDao.hasNotification(media.id, "ANIME_RELEASE")) {
-                        // Phone notification
                         notificationHelper.showNewAnimeNotification(
                             animeTitle = media.title.displayTitle,
                             animeId = media.id
                         )
-                        // Add to in-app notifications
                         animeDao.insertNotification(
                             NotificationEntity(
                                 type = "ANIME_RELEASE",

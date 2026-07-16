@@ -7,7 +7,9 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -38,17 +40,19 @@ import com.watchlist.anihub.ui.cleanDescription
 import com.watchlist.anihub.ui.components.*
 import com.watchlist.anihub.ui.theme.LocalTitleLanguage
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun CharacterDetailScreen(
     characterId: Int,
     onBackClick: () -> Unit,
     onAnimeClick: (Int) -> Unit,
-    viewModel: CharacterDetailViewModel = hiltViewModel()
+    viewModel: CharacterDetailViewModel = hiltViewModel(),
 ) {
     val characterState by viewModel.characterDetail.collectAsState()
     val isRefreshing by viewModel.isRefreshing.collectAsState()
     
+    var showImageViewer by remember { mutableStateOf(value = false) }
+
     LaunchedEffect(characterId) {
         viewModel.fetchCharacterDetail(characterId)
     }
@@ -137,9 +141,22 @@ fun CharacterDetailScreen(
                                                 modifier = Modifier
                                                     .size(130.dp)
                                                     .clip(CircleShape)
-                                                    .border(4.dp, MaterialTheme.colorScheme.surface, CircleShape),
+                                                    .border(4.dp, MaterialTheme.colorScheme.surface, CircleShape)
+                                                    .combinedClickable(
+                                                        onClick = { /* Nothing */ },
+                                                        onLongClick = { showImageViewer = true }
+                                                    ),
                                                 contentScale = ContentScale.Crop
                                             )
+
+                                            if (showImageViewer) {
+                                                ImageViewerDialog(
+                                                    imageUrl = char.image.large ?: "",
+                                                    title = char.name.full ?: "Character",
+                                                ) {
+                                                    showImageViewer = false
+                                                }
+                                            }
                                             Column(
                                                 modifier = Modifier
                                                     .padding(start = 16.dp)
@@ -260,9 +277,17 @@ fun CharacterDetailScreen(
                     }
                 }
                 is UiState.Error -> {
+                    val isConnectionError = state.message.contains("network", ignoreCase = true) || 
+                                          state.message.contains("internet", ignoreCase = true) ||
+                                          state.message.contains("connection", ignoreCase = true)
                     ErrorView(
                         message = state.message,
-                        onRetry = { viewModel.refresh(characterId) }
+                        onRetry = { viewModel.refresh(characterId) },
+                        icon = if (isConnectionError) {
+                            ImageVector.vectorResource(R.drawable.wifi_off)
+                        } else {
+                            ImageVector.vectorResource(R.drawable.triangle_alert)
+                        }
                     )
                 }
             }

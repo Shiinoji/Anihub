@@ -25,6 +25,13 @@ import coil.compose.AsyncImage
 import com.watchlist.anihub.R
 import com.watchlist.anihub.data.local.NotificationEntity
 
+/**
+ * Screen displaying the user's notification inbox, including episode alerts and app updates.
+ * Provides functionality to clear the inbox and navigate to specific anime details.
+ *
+ * @param onBackClick Callback to navigate back.
+ * @param onAnimeClick Callback when a notification related to an anime is clicked.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NotificationScreen(
@@ -62,6 +69,7 @@ fun NotificationScreen(
         if (notifications.isEmpty()) {
             EmptyNotifications(modifier = Modifier.padding(padding))
         } else {
+            // Scrollable list of in-app notifications
             LazyColumn(
                 modifier = Modifier
                     .fillMaxSize()
@@ -83,6 +91,10 @@ fun NotificationScreen(
     }
 }
 
+/**
+ * A card representing a single notification entry.
+ * Highlights unread notifications with a different background color and a dot indicator.
+ */
 @Composable
 fun NotificationItem(
     notification: NotificationEntity,
@@ -106,6 +118,7 @@ fun NotificationItem(
                 .fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
+            // Icon or Image thumbnail
             Box(
                 modifier = Modifier
                     .size(50.dp)
@@ -128,6 +141,7 @@ fun NotificationItem(
                 }
             }
 
+            // Notification Title and Message
             Column(
                 modifier = Modifier
                     .padding(start = 16.dp)
@@ -149,6 +163,7 @@ fun NotificationItem(
                 )
             }
             
+            // Unread dot indicator
             if (!notification.isRead) {
                 Box(
                     modifier = Modifier
@@ -161,6 +176,9 @@ fun NotificationItem(
     }
 }
 
+/**
+ * View displayed when there are no notifications in the inbox.
+ */
 @Composable
 fun EmptyNotifications(modifier: Modifier = Modifier) {
     Box(
