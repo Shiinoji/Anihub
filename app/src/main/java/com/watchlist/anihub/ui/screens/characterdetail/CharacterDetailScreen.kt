@@ -1,4 +1,4 @@
-package com.watchlist.anihub.ui.screens
+package com.watchlist.anihub.ui.screens.characterdetail
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize

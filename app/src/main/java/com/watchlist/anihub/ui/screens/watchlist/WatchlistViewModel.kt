@@ -1,4 +1,4 @@
-package com.watchlist.anihub.ui.screens
+package com.watchlist.anihub.ui.screens.watchlist
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope

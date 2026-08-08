@@ -1,4 +1,4 @@
-package com.watchlist.anihub.ui.screens
+package com.watchlist.anihub.ui.screens.settings
 
 import android.app.Application
 import android.net.Uri

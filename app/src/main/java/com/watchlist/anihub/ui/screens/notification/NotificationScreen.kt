@@ -1,4 +1,4 @@
-package com.watchlist.anihub.ui.screens
+package com.watchlist.anihub.ui.screens.notification
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable

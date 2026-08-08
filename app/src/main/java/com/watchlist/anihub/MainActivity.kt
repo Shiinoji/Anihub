@@ -22,7 +22,15 @@ import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
 import com.watchlist.anihub.ui.ThemeViewModel
 import com.watchlist.anihub.ui.navigation.Screen
-import com.watchlist.anihub.ui.screens.*
+import com.watchlist.anihub.ui.screens.animedetail.AnimeDetailScreen
+import com.watchlist.anihub.ui.screens.calendar.CalendarScreen
+import com.watchlist.anihub.ui.screens.characterdetail.CharacterDetailScreen
+import com.watchlist.anihub.ui.screens.history.HistoryScreen
+import com.watchlist.anihub.ui.screens.home.HomeScreen
+import com.watchlist.anihub.ui.screens.notification.NotificationScreen
+import com.watchlist.anihub.ui.screens.search.SearchScreen
+import com.watchlist.anihub.ui.screens.settings.SettingsScreen
+import com.watchlist.anihub.ui.screens.watchlist.WatchlistScreen
 import com.watchlist.anihub.ui.theme.AnihubTheme
 import dagger.hilt.android.AndroidEntryPoint
 

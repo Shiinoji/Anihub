@@ -9,7 +9,7 @@ import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.watchlist.anihub.data.local.WatchlistStatus
-import com.watchlist.anihub.ui.screens.WatchlistSort
+import com.watchlist.anihub.ui.screens.watchlist.WatchlistSort
 import com.watchlist.anihub.ui.theme.AiringFormat
 import com.watchlist.anihub.ui.theme.ColorPalette
 import com.watchlist.anihub.ui.theme.ScoreFormat

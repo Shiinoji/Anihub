@@ -1,4 +1,4 @@
-package com.watchlist.anihub.ui.screens
+package com.watchlist.anihub.ui.screens.settings
 
 import android.content.Context
 import android.content.Intent
@@ -248,8 +248,9 @@ fun SettingsScreen(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
+                        .padding(vertical = 12.dp)
                         .horizontalScroll(rememberScrollState()),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    horizontalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
                     PalettePreviewCard(
                         selected = colorPalette == ColorPalette.DYNAMIC,
@@ -266,6 +267,7 @@ fun SettingsScreen(
                             label = palette.name.lowercase().replaceFirstChar { it.uppercase() }
                         )
                     }
+                    Spacer(modifier = Modifier.width(4.dp))
                 }
 
                 HorizontalDivider(modifier = Modifier.padding(vertical = 24.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
@@ -494,25 +496,32 @@ fun PalettePreviewCard(
     accentColor: Color,
     label: String
 ) {
-    val scale by animateFloatAsState(if (selected) 1.15f else 1f, spring(dampingRatio = 0.5f))
+    val scale by animateFloatAsState(if (selected) 1.1f else 1f, spring(dampingRatio = 0.5f))
     
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier.width(64.dp)
+    ) {
         Box(
             modifier = Modifier
-                .size(56.dp)
+                .size(52.dp)
                 .scale(scale)
-                .clip(CircleShape)
-                .border(if (selected) 2.dp else 0.dp, MaterialTheme.colorScheme.primary, CircleShape)
-                .padding(if (selected) 4.dp else 0.dp)
+                .then(
+                    if (selected) Modifier.border(2.dp, MaterialTheme.colorScheme.primary, CircleShape)
+                    else Modifier.border(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f), CircleShape)
+                )
+                .padding(4.dp)
                 .clip(CircleShape)
                 .background(accentColor)
                 .clickable { onClick() }
         )
-        Spacer(modifier = Modifier.height(6.dp))
+        Spacer(modifier = Modifier.height(8.dp))
         Text(
             label,
             style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
-            color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+            fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
+            color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 1
         )
     }
 }
