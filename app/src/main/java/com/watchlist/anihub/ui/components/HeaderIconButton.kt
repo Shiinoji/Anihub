@@ -16,19 +16,23 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 
+/**
+ * A circular icon button designed for use in headers over visual content.
+ * Features a semi-transparent "glass" background for readability.
+ */
 @Composable
 fun HeaderIconButton(
     icon: ImageVector,
     onClick: () -> Unit,
     tint: Color = MaterialTheme.colorScheme.onSurface,
-    containerColor: Color = MaterialTheme.colorScheme.surface.copy(alpha = 0.4f)
+    containerColor: Color = Color.Black.copy(alpha = 0.2f)
 ) {
     Box(
         modifier = Modifier
-            .size(44.dp)
+            .size(40.dp)
             .clip(CircleShape)
             .background(containerColor)
-            .border(0.5.dp, Color.White.copy(alpha = 0.2f), CircleShape)
+            .border(1.dp, Color.White.copy(alpha = 0.1f), CircleShape)
             .clickable { onClick() },
         contentAlignment = Alignment.Center
     ) {
@@ -36,7 +40,7 @@ fun HeaderIconButton(
             imageVector = icon,
             contentDescription = null,
             tint = tint,
-            modifier = Modifier.size(24.dp)
+            modifier = Modifier.size(20.dp)
         )
     }
 }

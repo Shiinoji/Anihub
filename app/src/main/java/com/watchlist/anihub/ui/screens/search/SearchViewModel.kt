@@ -33,8 +33,14 @@ class SearchViewModel @Inject constructor(
     private val _searchResults = MutableStateFlow<UiState<List<Media>>>(UiState.Success(emptyList()))
     val searchResults = _searchResults.asStateFlow()
 
+    private val _recommendations = MutableStateFlow<UiState<List<Media>>>(UiState.Loading)
+    val recommendations = _recommendations.asStateFlow()
+
     private val _searchQuery = MutableStateFlow("")
     val searchQuery = _searchQuery.asStateFlow()
+
+    private val _suggestions = MutableStateFlow<List<Media>>(emptyList())
+    val suggestions = _suggestions.asStateFlow()
 
     private val _genres = MutableStateFlow<List<String>>(emptyList())
     /**
@@ -61,6 +67,7 @@ class SearchViewModel @Inject constructor(
 
     init {
         fetchGenres()
+        fetchRecommendations()
     }
 
     private data class SearchParameters(
@@ -83,6 +90,32 @@ class SearchViewModel @Inject constructor(
                 _genres.value = response.data?.genreCollection ?: emptyList()
             } catch (e: Exception) {
                 e.printStackTrace()
+            }
+        }
+    }
+
+    private fun fetchRecommendations() {
+        viewModelScope.launch {
+            _recommendations.value = UiState.Loading
+            try {
+                val isAdult = themeManager.adultContent.first()
+                val variables = mapOf(
+                    "page" to 1,
+                    "perPage" to 20,
+                    "isAdult" to isAdult
+                )
+                val response = aniListService.getAnimeList(
+                    GraphQLRequest(AniListQueries.TRENDING_NOW, variables)
+                )
+                
+                if (response.errors != null) {
+                    throw Exception(response.errors.firstOrNull()?.message ?: "Unknown error")
+                }
+                
+                val mediaList = response.data?.page?.media ?: emptyList()
+                _recommendations.value = UiState.Success(mediaList)
+            } catch (e: Exception) {
+                _recommendations.value = UiState.Error(NetworkUtils.getErrorMessage(e))
             }
         }
     }
@@ -114,10 +147,47 @@ class SearchViewModel @Inject constructor(
     }
 
     /**
-     * Updates the search query string. Does not trigger search automatically.
+     * Updates the search query string. Triggers a quick suggestion fetch if query is not blank.
      */
     fun onQueryChange(query: String) {
         _searchQuery.value = query
+        if (query.isNotBlank()) {
+            fetchSuggestions(query)
+        } else {
+            _suggestions.value = emptyList()
+        }
+    }
+
+    private var suggestionJob: Job? = null
+    private fun fetchSuggestions(query: String) {
+        suggestionJob?.cancel()
+        suggestionJob = viewModelScope.launch {
+            // Debounce or immediate? Let's do a short delay to avoid too many calls
+            kotlinx.coroutines.delay(300)
+            try {
+                val isAdult = themeManager.adultContent.first()
+                val variables = mapOf(
+                    "search" to query,
+                    "isAdult" to isAdult
+                )
+                val searchQueryStr = """
+                    query (${'$'}search: String, ${'$'}isAdult: Boolean) {
+                      Page(page: 1, perPage: 10) {
+                        media(search: ${'$'}search, type: ANIME, isAdult: ${'$'}isAdult) {
+                          id
+                          title { english romaji native }
+                        }
+                      }
+                    }
+                """
+                val response = aniListService.getAnimeList(
+                    GraphQLRequest(searchQueryStr, variables)
+                )
+                _suggestions.value = response.data?.page?.media ?: emptyList()
+            } catch (e: Exception) {
+                // Silently fail for suggestions
+            }
+        }
     }
 
     /**
@@ -125,6 +195,7 @@ class SearchViewModel @Inject constructor(
      */
     fun onSearchExplicit(query: String) {
         _searchQuery.value = query
+        _suggestions.value = emptyList()
         performSearch()
     }
 

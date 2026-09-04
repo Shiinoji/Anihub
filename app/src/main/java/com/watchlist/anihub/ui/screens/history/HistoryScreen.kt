@@ -3,8 +3,7 @@ package com.watchlist.anihub.ui.screens.history
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.DeleteOutline
+
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -15,6 +14,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.watchlist.anihub.R
 import com.watchlist.anihub.data.local.HistoryEntity
@@ -68,8 +68,8 @@ fun HistoryScreen(
                 title = { 
                     Text(
                         "History",
-                        style = MaterialTheme.typography.headlineSmall,
-                        fontWeight = FontWeight.Bold
+                        style = MaterialTheme.typography.headlineSmall.copy(fontSize = 24.sp),
+                        fontWeight = FontWeight.SemiBold
                     ) 
                 },
                 navigationIcon = {
@@ -80,7 +80,11 @@ fun HistoryScreen(
                 actions = {
                     if (history.isNotEmpty()) {
                         IconButton(onClick = { showDeleteDialog = true }) {
-                            Icon(Icons.Default.DeleteOutline, contentDescription = "Clear History")
+                            Icon(
+                                imageVector = ImageVector.vectorResource(R.drawable.trash_2),
+                                contentDescription = "Clear History",
+                                tint = MaterialTheme.colorScheme.error.copy(alpha = 0.8f)
+                            )
                         }
                     }
                 }

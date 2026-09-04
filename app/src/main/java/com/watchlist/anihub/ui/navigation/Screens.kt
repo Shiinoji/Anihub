@@ -11,6 +11,7 @@ sealed interface Screen {
     @Serializable data object History : Screen
     @Serializable data object Notifications : Screen
     @Serializable data object Calendar : Screen
+    @Serializable data class AnimeList(val category: String) : Screen
     @Serializable data class AnimeDetail(val id: Int) : Screen
     @Serializable data class CharacterDetail(val id: Int) : Screen
 }

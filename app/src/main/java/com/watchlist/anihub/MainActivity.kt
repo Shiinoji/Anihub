@@ -52,6 +52,8 @@ class MainActivity : ComponentActivity() {
             val titleLanguage by themeViewModel.titleLanguage.collectAsState()
             val scoreFormat by themeViewModel.scoreFormat.collectAsState()
             val showAiringCountdown by themeViewModel.showAiringCountdown.collectAsState()
+            val dynamicTheme by themeViewModel.dynamicTheme.collectAsState()
+            val displayScale by themeViewModel.displayScale.collectAsState()
 
             // Handle notification permission for Android 13+
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -66,9 +68,11 @@ class MainActivity : ComponentActivity() {
             AnihubTheme(
                 themeMode = themeMode,
                 colorPalette = colorPalette,
+                dynamicTheme = dynamicTheme,
                 titleLanguage = titleLanguage,
                 scoreFormat = scoreFormat,
-                showAiringCountdown = showAiringCountdown
+                showAiringCountdown = showAiringCountdown,
+                displayScale = displayScale
             ) {
                 MainContent(themeViewModel, startScreen)
             }
@@ -113,7 +117,12 @@ fun MainContent(themeViewModel: ThemeViewModel, startScreen: Screen = Screen.Hom
 
     Scaffold(
         bottomBar = {
-            if (currentScreen !is Screen.AnimeDetail && currentScreen !is Screen.Settings && currentScreen !is Screen.History && currentScreen !is Screen.Notifications) {
+            if (currentScreen !is Screen.AnimeDetail && 
+                currentScreen !is Screen.Settings && 
+                currentScreen !is Screen.History && 
+                currentScreen !is Screen.Notifications &&
+                currentScreen !is Screen.Calendar &&
+                currentScreen !is Screen.AnimeList) {
                 BottomNavigationBar(
                     currentScreen = currentScreen,
                     onNavigate = { navigateTo(it) }
@@ -138,12 +147,14 @@ fun MainContent(themeViewModel: ThemeViewModel, startScreen: Screen = Screen.Hom
                         Screen.Home -> 0
                         Screen.Search -> 1
                         Screen.Watchlist -> 2
+                        is Screen.AnimeList -> 3
                         else -> -1
                     }
                     val toIndex = when(to) {
                         Screen.Home -> 0
                         Screen.Search -> 1
                         Screen.Watchlist -> 2
+                        is Screen.AnimeList -> 3
                         else -> -1
                     }
 
@@ -196,6 +207,11 @@ fun MainContent(themeViewModel: ThemeViewModel, startScreen: Screen = Screen.Hom
                         onBackClick = { navigateBack() },
                         onAnimeClick = { navigateTo(Screen.AnimeDetail(it)) }
                     )
+                    is Screen.AnimeList -> com.watchlist.anihub.ui.screens.animelist.AnimeListScreen(
+                        category = screen.category,
+                        onBackClick = { navigateBack() },
+                        onAnimeClick = { navigateTo(Screen.AnimeDetail(it)) }
+                    )
                     is Screen.AnimeDetail -> AnimeDetailScreen(
                         animeId = screen.id,
                         onBackClick = { navigateBack() },
@@ -219,10 +235,8 @@ fun BottomNavigationBar(
     onNavigate: (Screen) -> Unit
 ) {
     NavigationBar(
-        modifier = Modifier.height(62.dp),
         containerColor = MaterialTheme.colorScheme.surface,
-        tonalElevation = 0.dp,
-        windowInsets = WindowInsets(0, 0, 0, 0)
+        tonalElevation = 0.dp
     ) {
         val items = listOf(
             BottomNavItem("Home", Screen.Home, ImageVector.vectorResource(id = R.drawable.house)),
@@ -235,23 +249,24 @@ fun BottomNavigationBar(
             NavigationBarItem(
                 selected = isSelected,
                 onClick = { onNavigate(item.screen) },
-                modifier = Modifier.offset(y = (-5).dp),
-                icon = { 
+                icon = {
                     Icon(
-                        imageVector = item.icon, 
+                        imageVector = item.icon,
                         contentDescription = item.title,
-                        tint = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(24.dp)
-                    ) 
+                    )
                 },
-                label = { 
+                label = {
                     Text(
                         text = item.title,
-                        style = MaterialTheme.typography.labelSmall,
-                        color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
-                    ) 
+                        style = MaterialTheme.typography.labelSmall
+                    )
                 },
                 colors = NavigationBarItemDefaults.colors(
+                    selectedIconColor = MaterialTheme.colorScheme.primary,
+                    selectedTextColor = MaterialTheme.colorScheme.primary,
+                    unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                    unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
                     indicatorColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.15f)
                 ),
                 alwaysShowLabel = true

@@ -14,7 +14,7 @@ fun SimpleAnimeCardSkeleton() {
         modifier = Modifier
             .width(140.dp)
             .aspectRatio(0.7f)
-            .clip(RoundedCornerShape(16.dp))
+            .clip(RoundedCornerShape(12.dp))
             .shimmerEffect()
     )
 }

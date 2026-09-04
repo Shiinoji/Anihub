@@ -65,6 +65,15 @@ data class Media(
     val nextAiringEpisode: AiringEpisode?,
     val genres: List<String>?,
     val trailer: MediaTrailer?,
+    val source: String?,
+    val season: String?,
+    val seasonYear: Int?,
+    val startDate: FuzzyDate?,
+    val endDate: FuzzyDate?,
+    val studios: StudioConnection?,
+    val staff: StaffConnection?,
+    val tags: List<MediaTag>?,
+    val externalLinks: List<MediaExternalLink>?,
     val characters: CharacterConnection?,
     val recommendations: RecommendationConnection?,
 ) {
@@ -98,6 +107,56 @@ data class MediaTrailer(
         else -> null
     }
 }
+
+@JsonClass(generateAdapter = true)
+data class StudioConnection(
+    val nodes: List<Studio>?
+)
+
+@JsonClass(generateAdapter = true)
+data class Studio(
+    val id: Int,
+    val name: String,
+    val isAnimationStudio: Boolean
+)
+
+@JsonClass(generateAdapter = true)
+data class StaffConnection(
+    val edges: List<StaffEdge>?
+)
+
+@JsonClass(generateAdapter = true)
+data class StaffEdge(
+    val role: String?,
+    val node: StaffNode?
+)
+
+@JsonClass(generateAdapter = true)
+data class StaffNode(
+    val id: Int,
+    val name: CharacterName,
+    val image: CharacterImage
+)
+
+@JsonClass(generateAdapter = true)
+data class MediaTag(
+    val id: Int,
+    val name: String,
+    val description: String?,
+    val category: String?,
+    val rank: Int?,
+    val isGeneralSpoiler: Boolean,
+    val isMediaSpoiler: Boolean
+)
+
+@JsonClass(generateAdapter = true)
+data class MediaExternalLink(
+    val id: Int,
+    val url: String,
+    val site: String,
+    val type: String?,
+    val language: String?
+)
 
 @JsonClass(generateAdapter = true)
 data class AiringEpisode(

@@ -51,6 +51,11 @@ class ThemeViewModel @Inject constructor(
         started = SharingStarted.WhileSubscribed(5000), 
         initialValue = false
     )
+    val dynamicTheme: StateFlow<Boolean> = themeManager.dynamicTheme.stateIn(
+        scope = viewModelScope, 
+        started = SharingStarted.WhileSubscribed(5000), 
+        initialValue = true
+    )
     val showAiringCountdown: StateFlow<Boolean> = themeManager.showAiringCountdown.stateIn(
         viewModelScope, SharingStarted.WhileSubscribed(5000), true
     )
@@ -59,6 +64,9 @@ class ThemeViewModel @Inject constructor(
     )
     val homeItemsPerRow: StateFlow<Int> = themeManager.homeItemsPerRow.stateIn(
         viewModelScope, SharingStarted.WhileSubscribed(5000), 2
+    )
+    val displayScale: StateFlow<Float> = themeManager.displayScale.stateIn(
+        viewModelScope, SharingStarted.WhileSubscribed(5000), 1.0f
     )
 
     // Update methods for persisting preferences
@@ -104,6 +112,12 @@ class ThemeViewModel @Inject constructor(
         }
     }
 
+    fun setDynamicTheme(enabled: Boolean) {
+        viewModelScope.launch {
+            themeManager.setDynamicTheme(enabled)
+        }
+    }
+
     fun setShowAiringCountdown(show: Boolean) {
         viewModelScope.launch {
             themeManager.setShowAiringCountdown(show)
@@ -122,6 +136,12 @@ class ThemeViewModel @Inject constructor(
     fun setHomeItemsPerRow(count: Int) {
         viewModelScope.launch {
             themeManager.setHomeItemsPerRow(count)
+        }
+    }
+
+    fun setDisplayScale(scale: Float) {
+        viewModelScope.launch {
+            themeManager.setDisplayScale(scale)
         }
     }
 

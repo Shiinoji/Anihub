@@ -101,7 +101,7 @@ class AnimeDetailViewModel @Inject constructor(
                 _isInWatchlist.value = currentLocalAnime != null
                 _isFavorite.value = currentLocalAnime?.isFavorite ?: false
                 _watchlistStatus.value = currentLocalAnime?.status ?: WatchlistStatus.PLAN_TO_WATCH
-                
+
                 // Step 3: If it's in watchlist, update the cache with fresh data
                 if (currentLocalAnime != null) {
                     val updatedEntity = currentLocalAnime.copy(

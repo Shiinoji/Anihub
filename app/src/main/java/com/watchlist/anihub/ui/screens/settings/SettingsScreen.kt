@@ -8,7 +8,6 @@ import android.os.PowerManager
 import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.animation.*
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
@@ -37,7 +36,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -57,7 +55,6 @@ fun SettingsScreen(
     onHistoryClick: () -> Unit,
     viewModel: ThemeViewModel
 ) {
-    val context = LocalContext.current
     val themeMode by viewModel.themeMode.collectAsState()
     val colorPalette by viewModel.colorPalette.collectAsState()
     val titleLanguage by viewModel.titleLanguage.collectAsState()
@@ -67,30 +64,14 @@ fun SettingsScreen(
     val adultContent by viewModel.adultContent.collectAsState()
     val showAiringCountdown by viewModel.showAiringCountdown.collectAsState()
     val notificationsEnabled by viewModel.notificationsEnabled.collectAsState()
-    val homeItemsPerRow by viewModel.homeItemsPerRow.collectAsState()
+    val dynamicTheme by viewModel.dynamicTheme.collectAsState()
+    val displayScale by viewModel.displayScale.collectAsState()
 
     val dataViewModel: DataManagementViewModel = hiltViewModel()
     val cacheSize by dataViewModel.cacheSize.collectAsState()
     val importState by dataViewModel.importState.collectAsState()
     val snackbarMessage by dataViewModel.snackbarMessage.collectAsState()
-
     val snackbarHostState = remember { SnackbarHostState() }
-    
-    // Check if battery optimization is ignored
-    var isIgnoringBatteryOptimizations by remember {
-        mutableStateOf(checkBatteryOptimization(context))
-    }
-
-    // Update battery status when returning from settings
-    DisposableEffect(Unit) {
-        onDispose { /* Cleanup if needed */ }
-    }
-
-    var showTitleDialog by remember { mutableStateOf(false) }
-    var showStaffDialog by remember { mutableStateOf(false) }
-    var showScoreDialog by remember { mutableStateOf(false) }
-    var showAiringDialog by remember { mutableStateOf(false) }
-    var showClearCacheDialog by remember { mutableStateOf(false) }
 
     val malPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
@@ -99,6 +80,13 @@ fun SettingsScreen(
     val exportLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.CreateDocument("text/xml")
     ) { uri: Uri? -> uri?.let { dataViewModel.exportWatchlist(it) } }
+
+    var showTitleDialog by remember { mutableStateOf(false) }
+    var showStaffDialog by remember { mutableStateOf(false) }
+    var showScoreDialog by remember { mutableStateOf(false) }
+    var showAiringDialog by remember { mutableStateOf(false) }
+    var showScaleDialog by remember { mutableStateOf(false) }
+    var showClearCacheDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(snackbarMessage) {
         snackbarMessage?.let {
@@ -115,7 +103,7 @@ fun SettingsScreen(
             selected = titleLanguage,
             onSelect = { viewModel.setTitleLanguage(it) },
             onDismiss = { showTitleDialog = false },
-            labelProvider = { it.name.lowercase().replaceFirstChar { it.uppercase() } }
+            labelProvider = { lang -> lang.name.lowercase().replaceFirstChar { it.uppercase() } }
         )
     }
 
@@ -126,7 +114,7 @@ fun SettingsScreen(
             selected = staffLanguage,
             onSelect = { viewModel.setStaffLanguage(it) },
             onDismiss = { showStaffDialog = false },
-            labelProvider = { it.name.replace("_", " ").lowercase().replaceFirstChar { it.uppercase() } }
+            labelProvider = { staff -> staff.name.replace("_", " ").lowercase().replaceFirstChar { it.uppercase() } }
         )
     }
 
@@ -137,7 +125,7 @@ fun SettingsScreen(
             selected = scoreFormat,
             onSelect = { viewModel.setScoreFormat(it) },
             onDismiss = { showScoreDialog = false },
-            labelProvider = { it.name.replace("POINT_", "Point ").replace("_", ".").lowercase().replaceFirstChar { it.uppercase() } }
+            labelProvider = { score -> score.name.replace("POINT_", "Point ").replace("_", ".").lowercase().replaceFirstChar { it.uppercase() } }
         )
     }
 
@@ -148,10 +136,21 @@ fun SettingsScreen(
             selected = airingFormat,
             onSelect = { viewModel.setAiringFormat(it) },
             onDismiss = { showAiringDialog = false },
-            labelProvider = { it.name.lowercase().replaceFirstChar { it.uppercase() } }
+            labelProvider = { airing -> airing.name.lowercase().replaceFirstChar { it.uppercase() } }
         )
     }
 
+    if (showScaleDialog) {
+        EnumSelectionDialog(
+            title = "Display Scale",
+            options = listOf(0.8f, 0.9f, 1.0f, 1.1f, 1.2f),
+            selected = displayScale,
+            onSelect = { viewModel.setDisplayScale(it) },
+            onDismiss = { showScaleDialog = false },
+            labelProvider = { "${(it * 100).toInt()}%" }
+        )
+    }
+    
     if (showClearCacheDialog) {
         AlertDialog(
             onDismissRequest = { showClearCacheDialog = false },
@@ -178,16 +177,25 @@ fun SettingsScreen(
         snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
         topBar = {
             LargeTopAppBar(
-                title = { Text("Settings", fontWeight = FontWeight.ExtraBold) },
+                title = { 
+                    Text(
+                        "Settings", 
+                        style = MaterialTheme.typography.headlineMedium.copy(fontSize = 24.sp),
+                        fontWeight = FontWeight.Medium,
+                        letterSpacing = (-1).sp
+                    ) 
+                },
                 navigationIcon = {
-                    IconButton(onClick = onBackClick) {
-                        Icon(ImageVector.vectorResource(R.drawable.arrow_left), contentDescription = "Back")
+                    IconButton(
+                        onClick = onBackClick
+                    ) {
+                        Icon(ImageVector.vectorResource(R.drawable.arrow_left), contentDescription = "Back", modifier = Modifier.size(24.dp))
                     }
                 },
                 scrollBehavior = scrollBehavior,
                 colors = TopAppBarDefaults.largeTopAppBarColors(
                     containerColor = MaterialTheme.colorScheme.background,
-                    scrolledContainerColor = MaterialTheme.colorScheme.surface
+                    scrolledContainerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f)
                 )
             )
         }
@@ -197,66 +205,62 @@ fun SettingsScreen(
                 .fillMaxSize()
                 .padding(padding)
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 20.dp),
+                .padding(horizontal = 16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
-            // SECTION: INTERFACE
-            SettingsCard(title = "Interface") {
-                SettingsSubHeader(title = "Appearance")
+            // SECTION: PERSONALIZATION (PREMIUM BENTO STYLE)
+            SettingsCard(title = "Personalization", icon = Icons.Default.Palette) {
+                SettingsSubHeader(title = "Theme Mode")
                 
                 Row(
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    ThemePreviewCard(
-                        label = "System",
-                        selected = themeMode == ThemeMode.SYSTEM,
-                        onClick = { viewModel.setThemeMode(ThemeMode.SYSTEM) },
-                        surfaceColor = MaterialTheme.colorScheme.surfaceVariant,
-                        accentColor = AniListBlue,
-                        icon = Icons.Default.RestartAlt
+                    val themeOptions = listOf(
+                        Triple("System", ThemeMode.SYSTEM, Icons.Default.SettingsSuggest),
+                        Triple("Light", ThemeMode.LIGHT, Icons.Default.LightMode),
+                        Triple("Dark", ThemeMode.DARK, Icons.Default.DarkMode),
+                        Triple("OLED", ThemeMode.AMOLED, Icons.Default.BrightnessLow)
                     )
-                    ThemePreviewCard(
-                        label = "Light",
-                        selected = themeMode == ThemeMode.LIGHT,
-                        onClick = { viewModel.setThemeMode(ThemeMode.LIGHT) },
-                        surfaceColor = Color.White,
-                        accentColor = AniListBlue
-                    )
-                    ThemePreviewCard(
-                        label = "Dark",
-                        selected = themeMode == ThemeMode.DARK,
-                        onClick = { viewModel.setThemeMode(ThemeMode.DARK) },
-                        surfaceColor = Color(0xFF1A1C1E),
-                        accentColor = AniListBlue
-                    )
-                    ThemePreviewCard(
-                        label = "AMOLED",
-                        selected = themeMode == ThemeMode.AMOLED,
-                        onClick = { viewModel.setThemeMode(ThemeMode.AMOLED) },
-                        surfaceColor = Color.Black,
-                        accentColor = AniListBlue
-                    )
+                    
+                    themeOptions.forEach { (label, mode, icon) ->
+                        Box(modifier = Modifier.padding(bottom = 8.dp)) {
+                            ThemePreviewCard(
+                                label = label,
+                                selected = themeMode == mode,
+                                onClick = { viewModel.setThemeMode(mode) },
+                                surfaceColor = when(mode) {
+                                    ThemeMode.LIGHT -> Color.White
+                                    ThemeMode.DARK -> Color(0xFF1A1C1E)
+                                    ThemeMode.AMOLED -> Color.Black
+                                    else -> MaterialTheme.colorScheme.surfaceVariant
+                                },
+                                accentColor = MaterialTheme.colorScheme.primary,
+                                icon = icon
+                            )
+                        }
+                    }
                 }
 
                 Spacer(modifier = Modifier.height(24.dp))
 
-                Text("Color Palette", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Spacer(modifier = Modifier.height(12.dp))
+                SettingsSubHeader(title = "Color Accent")
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(vertical = 12.dp)
+                        .padding(vertical = 8.dp)
                         .horizontalScroll(rememberScrollState()),
-                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     PalettePreviewCard(
                         selected = colorPalette == ColorPalette.DYNAMIC,
                         onClick = { viewModel.setColorPalette(ColorPalette.DYNAMIC) },
                         accentColor = AniListBlue,
-                        label = "Dynamic"
+                        label = "Dynamic",
+                        isDynamic = true,
+                        icon = ImageVector.vectorResource(R.drawable.palette)
                     )
                     ColorPalette.entries.filter { it != ColorPalette.DYNAMIC }.forEach { palette ->
                         val (_, accent) = getPaletteColors(palette)
@@ -267,85 +271,98 @@ fun SettingsScreen(
                             label = palette.name.lowercase().replaceFirstChar { it.uppercase() }
                         )
                     }
-                    Spacer(modifier = Modifier.width(4.dp))
-                }
-
-                HorizontalDivider(modifier = Modifier.padding(vertical = 24.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
-
-                SettingsSubHeader(title = "Layout")
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text("Home Grid Columns", style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold)
-                        Text("Discover feed density", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                    SegmentedToggle(
-                        options = listOf(2, 3),
-                        selectedOption = homeItemsPerRow,
-                        onOptionSelected = { viewModel.setHomeItemsPerRow(it) }
-                    )
                 }
             }
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // SECTION: CONTENT & PERFORMANCE
-            SettingsCard(title = "Content & Performance") {
-                SettingsRow(
-                    title = "View History",
-                    description = "Recent activity tracking",
-                    onClick = onHistoryClick,
-                    trailing = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null, tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)) }
-                )
-                
-                HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f))
-                
+            // SECTION: PREFERENCES
+            SettingsCard(title = "Preferences", icon = Icons.Default.Tune) {
                 SettingsSubHeader(title = "Localization")
-                SettingsRow(title = "Anime Titles", value = titleLanguage.name.lowercase().replaceFirstChar { it.uppercase() }, onClick = { showTitleDialog = true })
-                SettingsRow(title = "Staff Names", value = staffLanguage.name.replace("_", " ").lowercase().replaceFirstChar { it.uppercase() }, onClick = { showStaffDialog = true })
-
-                Spacer(modifier = Modifier.height(12.dp))
-                SettingsSubHeader(title = "Display Formats")
-                SettingsRow(title = "Score Format", value = scoreFormat.name.replace("POINT_", "Point ").replace("_", ".").lowercase().replaceFirstChar { it.uppercase() }, onClick = { showScoreDialog = true })
-                SettingsRow(title = "Airing Format", value = airingFormat.name.lowercase().replaceFirstChar { it.uppercase() }, onClick = { showAiringDialog = true })
-
-                HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f))
-                
-                SettingsSubHeader(title = "Background Tasks")
-                SettingsSwitchRow(
-                    title = "Always-on Notifications",
-                    description = "Enable high-frequency background sync",
-                    checked = notificationsEnabled,
-                    onCheckedChange = { viewModel.setNotificationsEnabled(it) }
-                )
-                
                 SettingsRow(
-                    title = "Battery Optimization",
-                    description = if (isIgnoringBatteryOptimizations) "Optimized for background" else "Recommended for notifications",
-                    value = if (isIgnoringBatteryOptimizations) "Off" else "On",
-                    onClick = { 
-                        requestIgnoreBatteryOptimization(context)
-                        // This won't update immediately as it's an external activity, 
-                        // but user will see it when they return.
-                    }
+                    title = "Title Language", 
+                    value = titleLanguage.name.lowercase().replaceFirstChar { it.uppercase() }, 
+                    onClick = { showTitleDialog = true },
+                    icon = ImageVector.vectorResource(R.drawable.languages)
+                )
+                SettingsRow(
+                    title = "Staff Names", 
+                    value = staffLanguage.name.replace("_", " ").lowercase().replaceFirstChar { it.uppercase() }, 
+                    onClick = { showStaffDialog = true },
+                    icon = Icons.Default.PersonSearch
                 )
 
-                Spacer(modifier = Modifier.height(12.dp))
-                SettingsSubHeader(title = "App Features")
-                SettingsSwitchRow(title = "Adult Content (R18+)", checked = adultContent, onCheckedChange = { viewModel.setAdultContent(it) })
-                SettingsSwitchRow(title = "Airing Countdown", checked = showAiringCountdown, onCheckedChange = { viewModel.setShowAiringCountdown(it) })
+                Spacer(modifier = Modifier.height(16.dp))
+                SettingsSubHeader(title = "Display")
+                SettingsRow(
+                    title = "Score Format", 
+                    value = scoreFormat.name.replace("POINT_", "Point ").replace("_", ".").lowercase().replaceFirstChar { it.uppercase() }, 
+                    onClick = { showScoreDialog = true },
+                    icon = ImageVector.vectorResource(R.drawable.star)
+                )
+                SettingsRow(
+                    title = "Airing Format", 
+                    value = airingFormat.name.lowercase().replaceFirstChar { it.uppercase() }, 
+                    onClick = { showAiringDialog = true },
+                    icon = ImageVector.vectorResource(R.drawable.calendar)
+                )
+                SettingsRow(
+                    title = "Display Scale",
+                    value = "${(displayScale * 100).toInt()}%",
+                    onClick = { showScaleDialog = true },
+                    icon = ImageVector.vectorResource(R.drawable.scaling)
+                )
+                
+                Spacer(modifier = Modifier.height(16.dp))
+                SettingsSubHeader(title = "View History")
+                SettingsRow(
+                    title = "Recent Activity",
+                    description = "View your watch history",
+                    onClick = onHistoryClick,
+                    icon = ImageVector.vectorResource(R.drawable.history)
+                )
             }
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // SECTION: DATA
-            SettingsCard(title = "Data Management") {
-                SettingsRow(title = "Import MyAnimeList", onClick = { malPickerLauncher.launch("text/xml") })
-                SettingsRow(title = "Export Watchlist", onClick = { exportLauncher.launch("anihub_export.xml") })
-                SettingsRow(title = "Clear Cache", value = cacheSize, onClick = { showClearCacheDialog = true })
+            // SECTION: ADVANCED & DATA
+            SettingsCard(title = "Advanced", icon = Icons.Default.AutoMode) {
+                SettingsSwitchRow(
+                    title = "Background Sync",
+                    description = "Enable high-frequency notifications",
+                    checked = notificationsEnabled,
+                    onCheckedChange = { viewModel.setNotificationsEnabled(it) },
+                    icon = Icons.Default.Sync
+                )
+                
+                SettingsSwitchRow(
+                    title = "Airing Countdown", 
+                    description = "Show live time until next episode",
+                    checked = showAiringCountdown, 
+                    onCheckedChange = { viewModel.setShowAiringCountdown(it) },
+                    icon = ImageVector.vectorResource(R.drawable.moon)
+                )
+
+                SettingsSwitchRow(
+                    title = "Adult Content (R18+)", 
+                    checked = adultContent, 
+                    onCheckedChange = { viewModel.setAdultContent(it) },
+                    icon = Icons.Default.LockOpen
+                )
+
+                SettingsSwitchRow(
+                    title = "Dynamic Theme",
+                    checked = dynamicTheme,
+                    onCheckedChange = { viewModel.setDynamicTheme(it) },
+                    icon = Icons.Default.Palette
+                )
+
+                HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f))
+                
+                SettingsSubHeader(title = "Data Management")
+                SettingsRow(title = "Import from MAL", onClick = { malPickerLauncher.launch("text/xml") }, icon = Icons.Default.FileUpload)
+                SettingsRow(title = "Export Watchlist", onClick = { exportLauncher.launch("anihub_export.xml") }, icon = Icons.Default.FileDownload)
+                SettingsRow(title = "Clear Cache", value = cacheSize, onClick = { showClearCacheDialog = true }, icon = Icons.Default.DeleteSweep)
             }
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -361,15 +378,33 @@ fun SettingsScreen(
 @Composable
 fun SettingsCard(
     title: String,
+    icon: ImageVector? = null,
     content: @Composable ColumnScope.() -> Unit
 ) {
-    Card(
+    Surface(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(28.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+        shape = RoundedCornerShape(24.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerLow,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f))
     ) {
         Column(modifier = Modifier.padding(20.dp)) {
-            Text(title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.ExtraBold)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                if (icon != null) {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(22.dp)
+                    )
+                    Spacer(modifier = Modifier.width(12.dp))
+                }
+                Text(
+                    text = title, 
+                    style = MaterialTheme.typography.titleLarge, 
+                    fontWeight = FontWeight.Medium,
+                    letterSpacing = (-0.5).sp
+                )
+            }
             Spacer(modifier = Modifier.height(20.dp))
             content()
         }
@@ -382,36 +417,58 @@ fun SettingsRow(
     description: String? = null,
     value: String? = null,
     onClick: () -> Unit,
-    trailing: @Composable (() -> Unit)? = null
+    icon: ImageVector? = null
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
-    val scale by animateFloatAsState(if (isPressed) 0.97f else 1f, spring(dampingRatio = 0.7f))
+    val scale by animateFloatAsState(if (isPressed) 0.98f else 1f, spring(dampingRatio = 0.7f))
 
     Surface(
         onClick = onClick,
         interactionSource = interactionSource,
         modifier = Modifier.fillMaxWidth().scale(scale),
         color = Color.Transparent,
-        shape = RoundedCornerShape(16.dp)
+        shape = RoundedCornerShape(12.dp)
     ) {
         Row(
-            modifier = Modifier.padding(vertical = 12.dp, horizontal = 4.dp),
+            modifier = Modifier.padding(vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
+            if (icon != null) {
+                Surface(
+                    modifier = Modifier.size(36.dp),
+                    shape = RoundedCornerShape(10.dp),
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(icon, null, modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.primary)
+                    }
+                }
+                Spacer(modifier = Modifier.width(16.dp))
+            }
+            
             Column(modifier = Modifier.weight(1f)) {
-                Text(title, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
+                Text(title, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium)
                 if (description != null) {
                     Text(description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
             if (value != null) {
-                Text(value, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary)
+                Surface(
+                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Text(
+                        text = value, 
+                        style = MaterialTheme.typography.labelMedium, 
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                        fontWeight = FontWeight.Medium
+                    )
+                }
                 Spacer(modifier = Modifier.width(8.dp))
-                Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f))
-            } else {
-                trailing?.invoke()
             }
+            Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null, modifier = Modifier.size(20.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f))
         }
     }
 }
@@ -421,17 +478,36 @@ fun SettingsSwitchRow(
     title: String,
     description: String? = null,
     checked: Boolean,
-    onCheckedChange: (Boolean) -> Unit
+    onCheckedChange: (Boolean) -> Unit,
+    icon: ImageVector? = null
 ) {
     Row(
         modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(title, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
-            if (description != null) {
-                Text(description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Row(
+            modifier = Modifier.weight(1f),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            if (icon != null) {
+                Surface(
+                    modifier = Modifier.size(36.dp),
+                    shape = RoundedCornerShape(10.dp),
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(icon, null, modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.primary)
+                    }
+                }
+                Spacer(modifier = Modifier.width(16.dp))
+            }
+            
+            Column {
+                Text(title, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium)
+                if (description != null) {
+                    Text(description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
             }
         }
         Switch(
@@ -483,7 +559,7 @@ fun ThemePreviewCard(
         Text(
             label,
             style = MaterialTheme.typography.labelSmall,
-            fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
+            fontWeight = if (selected) FontWeight.Medium else FontWeight.Normal,
             color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
         )
     }
@@ -494,7 +570,9 @@ fun PalettePreviewCard(
     selected: Boolean,
     onClick: () -> Unit,
     accentColor: Color,
-    label: String
+    label: String,
+    isDynamic: Boolean = false,
+    icon: ImageVector? = null
 ) {
     val scale by animateFloatAsState(if (selected) 1.1f else 1f, spring(dampingRatio = 0.5f))
     
@@ -512,14 +590,24 @@ fun PalettePreviewCard(
                 )
                 .padding(4.dp)
                 .clip(CircleShape)
-                .background(accentColor)
+                .background(if (isDynamic) Brush.sweepGradient(listOf(Color.Red, Color.Yellow, Color.Green, Color.Blue, Color.Magenta, Color.Red)) else Brush.linearGradient(listOf(accentColor, accentColor)))
+                .background(if (isDynamic) Color.Transparent else accentColor)
                 .clickable { onClick() }
-        )
+        ) {
+            if (icon != null) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    modifier = Modifier.align(Alignment.Center).size(24.dp),
+                    tint = Color.White
+                )
+            }
+        }
         Spacer(modifier = Modifier.height(8.dp))
         Text(
             label,
             style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
-            fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
+            fontWeight = if (selected) FontWeight.Medium else FontWeight.Normal,
             color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
             maxLines = 1
         )
@@ -533,10 +621,9 @@ fun AboutProfileCard(viewModel: ThemeViewModel) {
             modifier = Modifier.fillMaxWidth(),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            val context = LocalContext.current
-            val shiinojiResId = remember(context) {
-                context.resources.getIdentifier("shiinoji", "drawable", context.packageName)
-            }
+            // Removed unused context val
+            val shiinojiResId = R.drawable.shiinoji // Assuming R.drawable.shiinoji exists based on context
+
 
             Box(
                 modifier = Modifier
@@ -558,8 +645,8 @@ fun AboutProfileCard(viewModel: ThemeViewModel) {
             }
             
             Spacer(modifier = Modifier.height(16.dp))
-            Text("Shiinoji", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.ExtraBold)
-            Text("Lead Developer", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
+            Text("Shiinoji", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Medium)
+            Text("Lead Developer", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Medium)
             
             Spacer(modifier = Modifier.height(20.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
@@ -580,7 +667,7 @@ fun AboutProfileCard(viewModel: ThemeViewModel) {
             Icon(ImageVector.vectorResource(R.drawable.anilist_svgrepo_com), null, modifier = Modifier.size(24.dp), tint = Color(0xFF02A9FF))
             Spacer(modifier = Modifier.width(12.dp))
             Column {
-                Text("AniList API", style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold)
+                Text("AniList API", style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium)
                 Text("Powered by high-quality anime data", style = MaterialTheme.typography.bodySmall)
             }
         }
@@ -593,7 +680,7 @@ fun AboutProfileCard(viewModel: ThemeViewModel) {
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column {
-                Text("AniHub v${BuildConfig.VERSION_NAME}", style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold)
+                Text("AniHub v${BuildConfig.VERSION_NAME}", style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium)
                 Text("Build ${BuildConfig.VERSION_CODE}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             Button(
@@ -618,38 +705,6 @@ fun SocialButton(iconRes: Int, onClick: () -> Unit) {
     }
 }
 
-@Composable
-fun SegmentedToggle(
-    options: List<Int>,
-    selectedOption: Int,
-    onOptionSelected: (Int) -> Unit
-) {
-    Row(
-        modifier = Modifier
-            .clip(RoundedCornerShape(14.dp))
-            .background(MaterialTheme.colorScheme.surfaceContainerHigh)
-            .padding(4.dp),
-        horizontalArrangement = Arrangement.spacedBy(4.dp)
-    ) {
-        options.forEach { option ->
-            val isSelected = selectedOption == option
-            Box(
-                modifier = Modifier
-                    .size(width = 52.dp, height = 38.dp)
-                    .clip(RoundedCornerShape(10.dp))
-                    .background(if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent)
-                    .clickable { onOptionSelected(option) },
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = option.toString(),
-                    color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
-                    fontWeight = FontWeight.Bold
-                )
-            }
-        }
-    }
-}
 
 @Composable
 fun SettingsSubHeader(title: String) {
@@ -657,7 +712,7 @@ fun SettingsSubHeader(title: String) {
         text = title,
         style = MaterialTheme.typography.labelLarge,
         color = MaterialTheme.colorScheme.primary,
-        fontWeight = FontWeight.Bold,
+        fontWeight = FontWeight.Medium,
         modifier = Modifier.padding(bottom = 8.dp)
     )
 }

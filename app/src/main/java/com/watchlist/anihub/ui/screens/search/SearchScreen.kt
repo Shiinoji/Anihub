@@ -1,10 +1,13 @@
 package com.watchlist.anihub.ui.screens.search
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
@@ -39,6 +42,8 @@ fun SearchScreen(
     viewModel: SearchViewModel = hiltViewModel()
 ) {
     val results by viewModel.searchResults.collectAsState()
+    val recommendations by viewModel.recommendations.collectAsState()
+    val suggestions by viewModel.suggestions.collectAsState()
     val watchlistMap by viewModel.watchlistMap.collectAsState()
     val searchQuery by viewModel.searchQuery.collectAsState()
     val genres by viewModel.genres.collectAsState()
@@ -47,6 +52,7 @@ fun SearchScreen(
     val selectedSeason by viewModel.selectedSeason.collectAsState()
     val selectedStatus by viewModel.selectedStatus.collectAsState()
     val selectedSort by viewModel.selectedSort.collectAsState()
+    val titleLanguage = LocalTitleLanguage.current
 
     var showFilterSheet by remember { mutableStateOf(false) }
 
@@ -65,12 +71,12 @@ fun SearchScreen(
                 Text(
                     "Search Filters",
                     style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Medium
                 )
                 Spacer(modifier = Modifier.height(24.dp))
 
                 // Sort Section
-                Text("Sort By", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Text("Sort By", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Medium)
                 Spacer(modifier = Modifier.height(8.dp))
                 val sortOptions = listOf(
                     "POPULARITY_DESC" to "Popularity",
@@ -95,7 +101,7 @@ fun SearchScreen(
 
                 // Genres Section
                 if (genres.isNotEmpty()) {
-                    Text("Genres", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    Text("Genres", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Medium)
                     Spacer(modifier = Modifier.height(8.dp))
                     Row(
                         modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
@@ -113,7 +119,7 @@ fun SearchScreen(
                 }
 
                 // Season Section
-                Text("Season", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Text("Season", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Medium)
                 Spacer(modifier = Modifier.height(8.dp))
                 val seasons = listOf("WINTER", "SPRING", "SUMMER", "FALL")
                 Row(
@@ -131,7 +137,7 @@ fun SearchScreen(
                 Spacer(modifier = Modifier.height(16.dp))
 
                 // Year Section
-                Text("Year", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Text("Year", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Medium)
                 Spacer(modifier = Modifier.height(8.dp))
                 val currentYear = Calendar.getInstance().get(Calendar.YEAR)
                 val years = (currentYear + 1 downTo 1940).toList()
@@ -150,7 +156,7 @@ fun SearchScreen(
                 Spacer(modifier = Modifier.height(16.dp))
 
                 // Status Section
-                Text("Airing Status", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Text("Airing Status", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Medium)
                 Spacer(modifier = Modifier.height(8.dp))
                 val statuses = listOf(
                     "FINISHED" to "Finished",
@@ -197,57 +203,79 @@ fun SearchScreen(
                     }
                 },
                 modifier = Modifier
-                    .statusBarsPadding()
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 8.dp)
-            ) {}
+            ) {
+                if (suggestions.isNotEmpty() && searchQuery.isNotBlank()) {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxWidth(),
+                        contentPadding = PaddingValues(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        items(suggestions) { anime ->
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable {
+                                        viewModel.onSearchExplicit(anime.title.getDisplayTitle(titleLanguage))
+                                    },
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = ImageVector.vectorResource(R.drawable.search),
+                                    contentDescription = null,
+                                    modifier = Modifier.size(20.dp),
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Spacer(modifier = Modifier.width(16.dp))
+                                Text(
+                                    text = anime.title.getDisplayTitle(titleLanguage),
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                            }
+                        }
+                    }
+                }
+            }
         }
     ) { padding ->
-        val titleLanguage = LocalTitleLanguage.current
-        
+        val isInitialState = searchQuery.isBlank() && 
+                             selectedGenre == null && 
+                             selectedYear == null && 
+                             selectedSeason == null && 
+                             selectedStatus == null
+
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
         ) {
-            when (val state = results) {
-                is UiState.Loading -> {
-                    LazyVerticalGrid(
-                        columns = GridCells.Adaptive(140.dp),
-                        modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(16.dp),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp),
-                        userScrollEnabled = false
-                    ) {
-                        items(10) {
-                            SimpleAnimeCardSkeleton()
-                        }
-                    }
-                }
-                is UiState.Success -> {
-                    val animeList = state.data
-                    if (animeList.isEmpty()) {
-                        Box(
-                            modifier = Modifier.fillMaxSize(),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                Icon(
-                                    imageVector = ImageVector.vectorResource(R.drawable.search),
-                                    contentDescription = null,
-                                    modifier = Modifier.size(80.dp),
-                                    tint = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
-                                )
-                                Spacer(modifier = Modifier.height(16.dp))
-                                Text(
-                                    text = if (searchQuery.isBlank()) "Search for your favorite anime" else "No anime found",
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    color = MaterialTheme.colorScheme.outline
-                                )
+            if (isInitialState) {
+                when (val state = recommendations) {
+                    is UiState.Loading -> {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Text(
+                                "Recommended Anime",
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                            Spacer(modifier = Modifier.height(16.dp))
+                            LazyVerticalGrid(
+                                columns = GridCells.Adaptive(140.dp),
+                                modifier = Modifier.fillMaxSize(),
+                                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                verticalArrangement = Arrangement.spacedBy(12.dp),
+                                userScrollEnabled = false
+                            ) {
+                                items(6) {
+                                    SimpleAnimeCardSkeleton()
+                                }
                             }
                         }
-                    } else {
+                    }
+                    is UiState.Success -> {
+                        val animeList = state.data
                         LazyVerticalGrid(
                             columns = GridCells.Adaptive(140.dp),
                             modifier = Modifier.fillMaxSize(),
@@ -255,6 +283,14 @@ fun SearchScreen(
                             horizontalArrangement = Arrangement.spacedBy(12.dp),
                             verticalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
+                            item(span = { GridItemSpan(maxLineSpan) }) {
+                                Text(
+                                    "Recommended Anime",
+                                    style = MaterialTheme.typography.titleLarge,
+                                    fontWeight = FontWeight.Medium,
+                                    modifier = Modifier.padding(bottom = 8.dp)
+                                )
+                            }
                             items(animeList) { anime ->
                                 SimpleAnimeCard(
                                     title = anime.title.getDisplayTitle(titleLanguage),
@@ -265,20 +301,84 @@ fun SearchScreen(
                             }
                         }
                     }
+                    is UiState.Error -> {
+                        ErrorView(
+                            message = state.message,
+                            onRetry = { /* Recommendations are fetched in init */ }
+                        )
+                    }
                 }
-                is UiState.Error -> {
-                    val isConnectionError = state.message.contains("network", ignoreCase = true) || 
-                                          state.message.contains("internet", ignoreCase = true) ||
-                                          state.message.contains("connection", ignoreCase = true)
-                    ErrorView(
-                        message = state.message,
-                        onRetry = { viewModel.onSearchExplicit(searchQuery) },
-                        icon = if (isConnectionError) {
-                            ImageVector.vectorResource(R.drawable.wifi_off)
-                        } else {
-                            ImageVector.vectorResource(R.drawable.triangle_alert)
+            } else {
+                when (val state = results) {
+                    is UiState.Loading -> {
+                        LazyVerticalGrid(
+                            columns = GridCells.Adaptive(140.dp),
+                            modifier = Modifier.fillMaxSize(),
+                            contentPadding = PaddingValues(16.dp),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            verticalArrangement = Arrangement.spacedBy(12.dp),
+                            userScrollEnabled = false
+                        ) {
+                            items(10) {
+                                SimpleAnimeCardSkeleton()
+                            }
                         }
-                    )
+                    }
+                    is UiState.Success -> {
+                        val animeList = state.data
+                        if (animeList.isEmpty()) {
+                            Box(
+                                modifier = Modifier.fillMaxSize(),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Icon(
+                                        imageVector = ImageVector.vectorResource(R.drawable.search),
+                                        contentDescription = null,
+                                        modifier = Modifier.size(80.dp),
+                                        tint = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
+                                    )
+                                    Spacer(modifier = Modifier.height(16.dp))
+                                    Text(
+                                        text = "No anime found",
+                                        style = MaterialTheme.typography.bodyLarge,
+                                        color = MaterialTheme.colorScheme.outline
+                                    )
+                                }
+                            }
+                        } else {
+                            LazyVerticalGrid(
+                                columns = GridCells.Adaptive(140.dp),
+                                modifier = Modifier.fillMaxSize(),
+                                contentPadding = PaddingValues(16.dp),
+                                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                verticalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                items(animeList) { anime ->
+                                    SimpleAnimeCard(
+                                        title = anime.title.getDisplayTitle(titleLanguage),
+                                        imageUrl = anime.coverImage.extraLarge ?: anime.coverImage.large ?: "",
+                                        onClick = { onAnimeClick(anime.id) },
+                                        status = watchlistMap[anime.id]?.getDisplayName()
+                                    )
+                                }
+                            }
+                        }
+                    }
+                    is UiState.Error -> {
+                        val isConnectionError = state.message.contains("network", ignoreCase = true) || 
+                                              state.message.contains("internet", ignoreCase = true) ||
+                                              state.message.contains("connection", ignoreCase = true)
+                        ErrorView(
+                            message = state.message,
+                            onRetry = { viewModel.onSearchExplicit(searchQuery) },
+                            icon = if (isConnectionError) {
+                                ImageVector.vectorResource(R.drawable.wifi_off)
+                            } else {
+                                ImageVector.vectorResource(R.drawable.triangle_alert)
+                            }
+                        )
+                    }
                 }
             }
         }

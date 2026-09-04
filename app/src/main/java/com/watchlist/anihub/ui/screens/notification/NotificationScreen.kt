@@ -1,7 +1,6 @@
 package com.watchlist.anihub.ui.screens.notification
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -17,21 +16,14 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import com.watchlist.anihub.R
 import com.watchlist.anihub.data.local.NotificationEntity
 
-/**
- * Screen displaying the user's notification inbox, including episode alerts and app updates.
- * Provides functionality to clear the inbox and navigate to specific anime details.
- *
- * @param onBackClick Callback to navigate back.
- * @param onAnimeClick Callback when a notification related to an anime is clicked.
- */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NotificationScreen(
@@ -45,11 +37,7 @@ fun NotificationScreen(
         topBar = {
             TopAppBar(
                 title = { 
-                    Text(
-                        "Notifications", 
-                        style = MaterialTheme.typography.headlineSmall,
-                        fontWeight = FontWeight.Bold
-                    ) 
+                    Text("Notifications", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold) 
                 },
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
@@ -59,146 +47,71 @@ fun NotificationScreen(
                 actions = {
                     if (notifications.isNotEmpty()) {
                         IconButton(onClick = { viewModel.clearNotifications() }) {
-                            Icon(ImageVector.vectorResource(R.drawable.trash), contentDescription = "Clear All")
+                            Icon(ImageVector.vectorResource(R.drawable.trash_2), contentDescription = "Clear All", tint = MaterialTheme.colorScheme.error)
                         }
                     }
-                }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background)
             )
         }
     ) { padding ->
         if (notifications.isEmpty()) {
             EmptyNotifications(modifier = Modifier.padding(padding))
         } else {
-            // Scrollable list of in-app notifications
             LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding),
+                modifier = Modifier.fillMaxSize().padding(padding),
                 contentPadding = PaddingValues(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 items(notifications) { notification ->
-                    NotificationItem(
-                        notification = notification,
-                        onClick = {
-                            viewModel.markAsRead(notification.id)
-                            notification.animeId?.let { onAnimeClick(it) }
-                        }
-                    )
+                    NotificationItem(notification = notification, onClick = {
+                        viewModel.markAsRead(notification.id)
+                        notification.animeId?.let { onAnimeClick(it) }
+                    })
                 }
             }
         }
     }
 }
 
-/**
- * A card representing a single notification entry.
- * Highlights unread notifications with a different background color and a dot indicator.
- */
 @Composable
-fun NotificationItem(
-    notification: NotificationEntity,
-    onClick: () -> Unit
-) {
+fun NotificationItem(notification: NotificationEntity, onClick: () -> Unit) {
     Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { onClick() },
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = if (notification.isRead) 
-                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f) 
-            else 
-                MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.15f)
-        )
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
-        Row(
-            modifier = Modifier
-                .padding(16.dp)
-                .fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            // Icon or Image thumbnail
+        Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
             Box(
-                modifier = Modifier
-                    .size(50.dp)
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)),
+                modifier = Modifier.size(50.dp).clip(RoundedCornerShape(12.dp)).background(MaterialTheme.colorScheme.surface),
                 contentAlignment = Alignment.Center
             ) {
                 if (notification.imageUrl != null) {
-                    AsyncImage(
-                        model = notification.imageUrl,
-                        contentDescription = null,
-                        modifier = Modifier.fillMaxSize()
-                    )
+                    AsyncImage(model = notification.imageUrl, contentDescription = null, modifier = Modifier.fillMaxSize(), contentScale = androidx.compose.ui.layout.ContentScale.Crop)
                 } else {
-                    Icon(
-                        imageVector = ImageVector.vectorResource(R.drawable.bell),
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary
-                    )
+                    Icon(ImageVector.vectorResource(R.drawable.bell), null, tint = MaterialTheme.colorScheme.primary)
                 }
             }
-
-            // Notification Title and Message
-            Column(
-                modifier = Modifier
-                    .padding(start = 16.dp)
-                    .weight(1f)
-            ) {
-                Text(
-                    text = notification.title,
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                Spacer(modifier = Modifier.height(2.dp))
-                Text(
-                    text = notification.message,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis
-                )
+            Column(modifier = Modifier.padding(start = 16.dp).weight(1f)) {
+                Text(notification.title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(notification.message, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 2, overflow = TextOverflow.Ellipsis)
             }
-            
-            // Unread dot indicator
             if (!notification.isRead) {
-                Box(
-                    modifier = Modifier
-                        .size(8.dp)
-                        .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.primary)
-                )
+                Box(modifier = Modifier.size(8.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primary))
             }
         }
     }
 }
 
-/**
- * View displayed when there are no notifications in the inbox.
- */
 @Composable
 fun EmptyNotifications(modifier: Modifier = Modifier) {
-    Box(
-        modifier = modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center
-    ) {
+    Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Icon(
-                imageVector = ImageVector.vectorResource(R.drawable.bell),
-                contentDescription = null,
-                modifier = Modifier.size(80.dp),
-                tint = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
-            )
+            Icon(ImageVector.vectorResource(R.drawable.bell), null, modifier = Modifier.size(64.dp), tint = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f))
             Spacer(modifier = Modifier.height(16.dp))
-            Text(
-                text = "No notifications yet",
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.outline,
-                textAlign = TextAlign.Center
-            )
+            Text("No notifications", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.outline)
         }
     }
 }

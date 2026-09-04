@@ -8,6 +8,7 @@ import kotlinx.coroutines.flow.first
 import javax.inject.Inject
 import javax.inject.Singleton
 
+// This function is not yet deployed
 /**
  * Manages application update checks by fetching version information from a remote source.
  * Notifies the user via system and in-app notifications if a newer version is available.

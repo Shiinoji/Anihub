@@ -38,6 +38,8 @@ object AniListQueries {
               id
               title { english romaji native }
               coverImage { extraLarge large medium }
+              averageScore
+              genres
             }
           }
         }
@@ -92,11 +94,33 @@ object AniListQueries {
             episodes
             averageScore
             genres
+            source
+            season
+            seasonYear
+            startDate { year month day }
+            endDate { year month day }
             trailer { id site thumbnail }
             nextAiringEpisode {
               airingAt
               timeUntilAiring
               episode
+            }
+            studios(isMain: true) {
+              nodes {
+                id
+                name
+                isAnimationStudio
+              }
+            }
+            staff {
+              edges {
+                role
+                node {
+                  id
+                  name { full }
+                  image { large }
+                }
+              }
             }
             characters {
               nodes {
@@ -104,6 +128,22 @@ object AniListQueries {
                 name { full }
                 image { large }
               }
+            }
+            tags {
+              id
+              name
+              description
+              category
+              rank
+              isGeneralSpoiler
+              isMediaSpoiler
+            }
+            externalLinks {
+              id
+              url
+              site
+              type
+              language
             }
             recommendations {
               nodes {

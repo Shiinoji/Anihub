@@ -5,6 +5,7 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
@@ -41,8 +42,10 @@ class ThemeManager @Inject constructor(
     private val scoreFormatKey = stringPreferencesKey("score_format")
     private val airingFormatKey = stringPreferencesKey("airing_format")
     private val adultContentKey = booleanPreferencesKey("adult_content")
+    private val dynamicThemeKey = booleanPreferencesKey("dynamic_theme")
     private val showAiringCountdownKey = booleanPreferencesKey("show_airing_countdown")
     private val notificationsKey = booleanPreferencesKey("notifications_enabled")
+    private val displayScaleKey = floatPreferencesKey("display_scale")
 
     // Layout & Filtering Keys
     private val watchlistFilterKey = stringPreferencesKey("watchlist_filter")
@@ -99,6 +102,13 @@ class ThemeManager @Inject constructor(
     }.distinctUntilChanged()
 
     /**
+     * Whether dynamic theme is enabled.
+     */
+    val dynamicTheme: Flow<Boolean> = context.dataStore.data.map { preferences ->
+        preferences[dynamicThemeKey] ?: true
+    }.distinctUntilChanged()
+
+    /**
      * Whether to include adult (R18+) content in results.
      */
     val adultContent: Flow<Boolean> = context.dataStore.data.map { preferences ->
@@ -117,6 +127,13 @@ class ThemeManager @Inject constructor(
      */
     val notificationsEnabled: Flow<Boolean> = context.dataStore.data.map { preferences ->
         preferences[notificationsKey] ?: true
+    }.distinctUntilChanged()
+
+    /**
+     * Display scale for user experience.
+     */
+    val displayScale: Flow<Float> = context.dataStore.data.map { preferences ->
+        preferences[displayScaleKey] ?: 1.0f
     }.distinctUntilChanged()
 
     /**
@@ -191,6 +208,12 @@ class ThemeManager @Inject constructor(
         }
     }
 
+    suspend fun setDynamicTheme(enabled: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[dynamicThemeKey] = enabled
+        }
+    }
+
     suspend fun setShowAiringCountdown(show: Boolean) {
         context.dataStore.edit { preferences ->
             preferences[showAiringCountdownKey] = show
@@ -200,6 +223,12 @@ class ThemeManager @Inject constructor(
     suspend fun setNotificationsEnabled(enabled: Boolean) {
         context.dataStore.edit { preferences ->
             preferences[notificationsKey] = enabled
+        }
+    }
+
+    suspend fun setDisplayScale(scale: Float) {
+        context.dataStore.edit { preferences ->
+            preferences[displayScaleKey] = scale
         }
     }
 

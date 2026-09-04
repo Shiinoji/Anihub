@@ -18,6 +18,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.watchlist.anihub.R
 import com.watchlist.anihub.data.local.AnimeEntity
@@ -82,13 +83,13 @@ fun WatchlistScreen(
                 Text(
                     "Personalize View",
                     style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Medium
                 )
                 Spacer(modifier = Modifier.height(24.dp))
 
                 // Filter Section (Only for Watchlist tab)
                 if (selectedTab == 0) {
-                    Text("Filter by Status", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    Text("Filter by Status", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Medium)
                     Spacer(modifier = Modifier.height(8.dp))
                     FlowRow(
                         modifier = Modifier.fillMaxWidth(),
@@ -112,7 +113,7 @@ fun WatchlistScreen(
                 }
 
                 // Sort Section
-                Text("Sort Order", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Text("Sort Order", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Medium)
                 Spacer(modifier = Modifier.height(8.dp))
                 FlowRow(
                     modifier = Modifier.fillMaxWidth(),
@@ -136,7 +137,7 @@ fun WatchlistScreen(
                 Spacer(modifier = Modifier.height(24.dp))
 
                 // Display Section
-                Text("Items per Row: $itemsPerRow", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Text("Items per Row: $itemsPerRow", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Medium)
                 Slider(
                     value = itemsPerRow.toFloat(),
                     onValueChange = { viewModel.setItemsPerRow(it.toInt()) },
@@ -153,8 +154,8 @@ fun WatchlistScreen(
                 title = { 
                     Text(
                         "Watchlist",
-                        style = MaterialTheme.typography.headlineSmall,
-                        fontWeight = FontWeight.Bold
+                        style = MaterialTheme.typography.headlineSmall.copy(fontSize = 24.sp),
+                        fontWeight = FontWeight.Medium
                     )
                 },
                 navigationIcon = {
@@ -170,12 +171,17 @@ fun WatchlistScreen(
             )
         }
     ) { padding ->
-        Column(modifier = Modifier.padding(padding)) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(bottom = padding.calculateBottomPadding())
+        ) {
             TabRow(
                 selectedTabIndex = selectedTab,
                 containerColor = MaterialTheme.colorScheme.surface,
                 contentColor = MaterialTheme.colorScheme.primary,
                 divider = {},
+                modifier = Modifier.padding(top = padding.calculateTopPadding()),
                 indicator = { tabPositions ->
                     if (selectedTab < tabPositions.size) {
                         Box(
@@ -200,7 +206,7 @@ fun WatchlistScreen(
                             Text(
                                 text = title,
                                 style = if (selectedTab == index) 
-                                    MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
+                                    MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Medium)
                                 else 
                                     MaterialTheme.typography.titleMedium,
                                 modifier = Modifier.padding(bottom = 8.dp)

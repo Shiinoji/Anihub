@@ -23,6 +23,7 @@ import com.watchlist.anihub.ui.components.SimpleAnimeCard
 import com.watchlist.anihub.ui.components.SimpleAnimeCardSkeleton
 import com.watchlist.anihub.ui.components.ErrorView
 import com.watchlist.anihub.ui.theme.LocalTitleLanguage
+import com.watchlist.anihub.ui.theme.LocalDisplayScale
 
 /**
  * The main landing screen of the app. Displays categorized horizontal lists of anime
@@ -49,8 +50,9 @@ fun HomeScreen(
     val discoverAnime by viewModel.discoverAnime.collectAsState()
     val discoverState by viewModel.discoverState.collectAsState()
     val watchlistMap by viewModel.watchlistMap.collectAsState()
-    val itemsPerRow by viewModel.homeItemsPerRow.collectAsState()
     val isRefreshing by viewModel.isRefreshing.collectAsState()
+    val titleLanguage = LocalTitleLanguage.current
+    val displayScale = LocalDisplayScale.current
 
     Scaffold(
         topBar = {
@@ -83,8 +85,6 @@ fun HomeScreen(
                 .fillMaxSize()
                 .padding(padding)
         ) {
-            val titleLanguage = LocalTitleLanguage.current
-            
             // Consolidate errors: if any section fails, show a single global error view
             val states = listOf(trendingState, popularState, seasonalState)
             val errorState = states.asSequence().filterIsInstance<UiState.Error>().firstOrNull()
@@ -123,7 +123,13 @@ fun HomeScreen(
                         )
                     }
 
-                    // Chunking the discover list for a custom grid implementation in LazyColumn
+                    // Discover Grid with dynamic column count based on scale
+                    val itemsPerRow = when {
+                        displayScale <= 0.8f -> 4
+                        displayScale <= 1.0f -> 3
+                        else -> 2
+                    }
+                    
                     val chunkedList = discoverAnime.chunked(itemsPerRow)
                     
                     itemsIndexed(chunkedList) { index, rowItems ->

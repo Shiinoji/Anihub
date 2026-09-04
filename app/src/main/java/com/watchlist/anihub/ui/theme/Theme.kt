@@ -9,6 +9,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
@@ -16,6 +17,7 @@ import androidx.core.view.WindowCompat
 val LocalTitleLanguage = compositionLocalOf { TitleLanguage.ROMAJI }
 val LocalScoreFormat = compositionLocalOf { ScoreFormat.POINT_10 }
 val LocalShowAiringCountdown = compositionLocalOf { true }
+val LocalDisplayScale = compositionLocalOf { 1.0f }
 
 private fun getLightColorScheme(palette: ColorPalette): ColorScheme {
     val (primary, secondary, surface) = when (palette) {
@@ -77,9 +79,11 @@ private fun getDarkColorScheme(palette: ColorPalette, isAmoled: Boolean): ColorS
 fun AnihubTheme(
     themeMode: ThemeMode = ThemeMode.SYSTEM,
     colorPalette: ColorPalette = ColorPalette.DYNAMIC,
+    dynamicTheme: Boolean = true,
     titleLanguage: TitleLanguage = TitleLanguage.ROMAJI,
     scoreFormat: ScoreFormat = ScoreFormat.POINT_10,
     showAiringCountdown: Boolean = true,
+    displayScale: Float = 1.0f,
     content: @Composable () -> Unit
 ) {
     val darkTheme = when (themeMode) {
@@ -91,7 +95,7 @@ fun AnihubTheme(
 
     val context = LocalContext.current
     var colorScheme = when {
-        colorPalette == ColorPalette.DYNAMIC && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
+        dynamicTheme && colorPalette == ColorPalette.DYNAMIC && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
             if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
         }
         darkTheme -> getDarkColorScheme(colorPalette, themeMode == ThemeMode.AMOLED)
@@ -113,19 +117,40 @@ fun AnihubTheme(
     if (!view.isInEditMode) {
         SideEffect {
             val window = (view.context as Activity).window
+            window.navigationBarColor = Color.Transparent.toArgb()
+            window.statusBarColor = Color.Transparent.toArgb()
+            
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                window.isNavigationBarContrastEnforced = false
+                window.isStatusBarContrastEnforced = false
+            }
+            
             val insetsController = WindowCompat.getInsetsController(window, view)
             insetsController.isAppearanceLightStatusBars = !darkTheme
+            insetsController.isAppearanceLightNavigationBars = !darkTheme
         }
     }
 
     CompositionLocalProvider(
         LocalTitleLanguage provides titleLanguage,
         LocalScoreFormat provides scoreFormat,
-        LocalShowAiringCountdown provides showAiringCountdown
+        LocalShowAiringCountdown provides showAiringCountdown,
+        LocalDisplayScale provides displayScale
     ) {
+        val scaledTypography = Typography.copy(
+            bodyLarge = Typography.bodyLarge.copy(fontSize = Typography.bodyLarge.fontSize * displayScale),
+            titleLarge = Typography.titleLarge.copy(fontSize = Typography.titleLarge.fontSize * displayScale),
+            titleMedium = Typography.titleMedium.copy(fontSize = Typography.titleMedium.fontSize * displayScale),
+            titleSmall = Typography.titleSmall.copy(fontSize = Typography.titleSmall.fontSize * displayScale),
+            bodyMedium = Typography.bodyMedium.copy(fontSize = Typography.bodyMedium.fontSize * displayScale),
+            bodySmall = Typography.bodySmall.copy(fontSize = Typography.bodySmall.fontSize * displayScale),
+            labelLarge = Typography.labelLarge.copy(fontSize = Typography.labelLarge.fontSize * displayScale),
+            labelMedium = Typography.labelMedium.copy(fontSize = Typography.labelMedium.fontSize * displayScale),
+            labelSmall = Typography.labelSmall.copy(fontSize = Typography.labelSmall.fontSize * displayScale)
+        )
         MaterialTheme(
             colorScheme = colorScheme,
-            typography = Typography,
+            typography = scaledTypography,
             content = content
         )
     }

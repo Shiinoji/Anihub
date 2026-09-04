@@ -1,6 +1,9 @@
 package com.watchlist.anihub.ui.components
 
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.basicMarquee
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.border
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -9,9 +12,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
@@ -40,20 +43,22 @@ fun SimpleAnimeCard(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
+            .clip(RoundedCornerShape(12.dp))
             .combinedClickable(
                 onClick = onClick,
                 onLongClick = onLongClick
             )
     ) {
         Card(
-            shape = RoundedCornerShape(16.dp),
+            shape = RoundedCornerShape(12.dp),
             modifier = Modifier
                 .aspectRatio(0.7f)
-                .fillMaxWidth(),
+                .fillMaxWidth()
+                .border(1.dp, Color.White.copy(alpha = 0.15f), RoundedCornerShape(12.dp)),
             colors = CardDefaults.cardColors(
                 containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
-            )
+            ),
+            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
         ) {
             Box(modifier = Modifier.fillMaxSize()) {
                 // High-quality anime cover image
@@ -63,20 +68,31 @@ fun SimpleAnimeCard(
                     modifier = Modifier.fillMaxSize(),
                     contentScale = ContentScale.Crop
                 )
-                
+
                 // Watchlist status badge (appears if the anime is in the user's list)
                 if (status != null) {
+                    val statusColor = when (status.lowercase()) {
+                        "watching" -> Color(0xFF4CAF50)
+                        "plan to watch" -> Color(0xFF2196F3)
+                        "finished" -> Color(0xFF9C27B0)
+                        "on hold" -> Color(0xFFFF9800)
+                        "dropped" -> Color(0xFFF44336)
+                        else -> MaterialTheme.colorScheme.primary
+                    }
+
                     Surface(
-                        color = MaterialTheme.colorScheme.primary,
+                        color = statusColor.copy(alpha = 0.7f),
                         shape = RoundedCornerShape(bottomEnd = 12.dp),
-                        modifier = Modifier.align(Alignment.TopStart)
+                        modifier = Modifier.align(Alignment.TopStart),
+                        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.2f))
                     ) {
                         Text(
-                            text = status,
+                            text = status.uppercase(),
                             style = MaterialTheme.typography.labelSmall,
                             modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                            color = MaterialTheme.colorScheme.onPrimary,
-                            fontWeight = FontWeight.ExtraBold
+                            color = Color.White,
+                            fontWeight = FontWeight.Medium,
+                            letterSpacing = 0.5.sp
                         )
                     }
                 }
@@ -87,10 +103,11 @@ fun SimpleAnimeCard(
         Text(
             text = title,
             style = MaterialTheme.typography.titleSmall,
-            fontWeight = FontWeight.Bold,
-            maxLines = 2,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.padding(horizontal = 4.dp),
+            fontWeight = FontWeight.Medium,
+            maxLines = 1,
+            modifier = Modifier
+                .padding(horizontal = 4.dp)
+                .basicMarquee(),
             lineHeight = 18.sp
         )
     }

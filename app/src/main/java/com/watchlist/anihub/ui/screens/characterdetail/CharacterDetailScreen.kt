@@ -165,7 +165,7 @@ fun CharacterDetailScreen(
                                                 Text(
                                                     text = char.name.full ?: "Unknown",
                                                     style = MaterialTheme.typography.headlineSmall,
-                                                    fontWeight = FontWeight.Bold,
+                                                    fontWeight = FontWeight.Medium,
                                                     color = metadataColor
                                                 )
                                                 Spacer(modifier = Modifier.height(8.dp))
@@ -192,7 +192,7 @@ fun CharacterDetailScreen(
                                     Text(
                                         text = "Biography",
                                         style = MaterialTheme.typography.titleMedium,
-                                        fontWeight = FontWeight.Bold
+                                        fontWeight = FontWeight.Medium
                                     )
                                     Spacer(modifier = Modifier.height(4.dp))
                                     Text(
@@ -214,7 +214,7 @@ fun CharacterDetailScreen(
                                     Text(
                                         text = "Appearances",
                                         style = MaterialTheme.typography.titleMedium,
-                                        fontWeight = FontWeight.Bold,
+                                        fontWeight = FontWeight.Medium,
                                         modifier = Modifier.padding(16.dp)
                                     )
                                     val titleLanguage = LocalTitleLanguage.current
