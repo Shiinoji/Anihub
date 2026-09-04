@@ -13,8 +13,8 @@ class UpdateManager @Inject constructor(
         return try {
             val latestRelease = gitHubReleaseApi.getLatestRelease()
             val currentVersion = "v${BuildConfig.VERSION_NAME}"
-            if (latestRelease.tag_name > currentVersion) {
-                latestRelease.html_url
+            if (latestRelease.tagName > currentVersion) {
+                latestRelease.htmlUrl
             } else {
                 null
             }

@@ -5,6 +5,7 @@ import androidx.hilt.work.HiltWorkerFactory
 import androidx.work.*
 import com.watchlist.anihub.data.NotificationWorker
 import com.watchlist.anihub.data.UpdateManager
+import com.watchlist.anihub.workers.UpdateCheckWorker
 import dagger.hilt.android.HiltAndroidApp
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.launch
@@ -45,11 +46,23 @@ class AnihubApp : Application(), Configuration.Provider {
         )
             .setConstraints(constraints)
             .build()
+        
+        val updateCheckRequest = PeriodicWorkRequestBuilder<UpdateCheckWorker>(
+            24, TimeUnit.HOURS
+        )
+            .setConstraints(constraints)
+            .build()
 
         WorkManager.getInstance(this).enqueueUniquePeriodicWork(
             "AnimeUpdateWork",
             ExistingPeriodicWorkPolicy.KEEP,
             repeatingRequest
+        )
+        
+        WorkManager.getInstance(this).enqueueUniquePeriodicWork(
+            "AppUpdateCheckWork",
+            ExistingPeriodicWorkPolicy.KEEP,
+            updateCheckRequest
         )
     }
 }

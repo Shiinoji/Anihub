@@ -42,6 +42,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.watchlist.anihub.BuildConfig
 import com.watchlist.anihub.R
 import com.watchlist.anihub.ui.ThemeViewModel
+import com.watchlist.anihub.ui.UpdateState
 import com.watchlist.anihub.ui.theme.*
 
 /**
@@ -66,6 +67,8 @@ fun SettingsScreen(
     val notificationsEnabled by viewModel.notificationsEnabled.collectAsState()
     val dynamicTheme by viewModel.dynamicTheme.collectAsState()
     val displayScale by viewModel.displayScale.collectAsState()
+    val updateState by viewModel.updateState.collectAsState()
+    val context = LocalContext.current
 
     val dataViewModel: DataManagementViewModel = hiltViewModel()
     val cacheSize by dataViewModel.cacheSize.collectAsState()
@@ -616,14 +619,15 @@ fun PalettePreviewCard(
 
 @Composable
 fun AboutProfileCard(viewModel: ThemeViewModel) {
+    val updateState by viewModel.updateState.collectAsState()
+    val context = LocalContext.current
+
     SettingsCard(title = "About") {
         Column(
             modifier = Modifier.fillMaxWidth(),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Removed unused context val
-            val shiinojiResId = R.drawable.shiinoji // Assuming R.drawable.shiinoji exists based on context
-
+            val shiinojiResId = R.drawable.shiinoji 
 
             Box(
                 modifier = Modifier
@@ -650,7 +654,6 @@ fun AboutProfileCard(viewModel: ThemeViewModel) {
             
             Spacer(modifier = Modifier.height(20.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                val context = LocalContext.current
                 SocialButton(R.drawable.github_142_svgrepo_com) {
                     val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/Shiinoji/Anihub"))
                     context.startActivity(intent)
@@ -682,12 +685,36 @@ fun AboutProfileCard(viewModel: ThemeViewModel) {
             Column {
                 Text("AniHub v${BuildConfig.VERSION_NAME}", style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium)
                 Text("Build ${BuildConfig.VERSION_CODE}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                
+                LaunchedEffect(updateState) {
+                    when (val state = updateState) {
+                        is UpdateState.UpdateAvailable -> {
+                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(state.url))
+                            context.startActivity(intent)
+                            viewModel.resetUpdateState()
+                        }
+                        is UpdateState.UpToDate -> {
+                            android.widget.Toast.makeText(context, "App is up to date", android.widget.Toast.LENGTH_SHORT).show()
+                            viewModel.resetUpdateState()
+                        }
+                        is UpdateState.Error -> {
+                            android.widget.Toast.makeText(context, "Error checking for updates: ${state.message}", android.widget.Toast.LENGTH_SHORT).show()
+                            viewModel.resetUpdateState()
+                        }
+                        else -> {}
+                    }
+                }
             }
             Button(
                 onClick = { viewModel.checkForUpdates() },
+                enabled = updateState !is UpdateState.Checking,
                 shape = RoundedCornerShape(12.dp)
             ) {
-                Text("Update")
+                if (updateState is UpdateState.Checking) {
+                    CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                } else {
+                    Text("Update")
+                }
             }
         }
     }

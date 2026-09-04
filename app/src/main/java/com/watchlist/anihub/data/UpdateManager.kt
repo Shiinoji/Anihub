@@ -8,56 +8,40 @@ import kotlinx.coroutines.flow.first
 import javax.inject.Inject
 import javax.inject.Singleton
 
-// This function is not yet deployed
-/**
- * Manages application update checks by fetching version information from a remote source.
- * Notifies the user via system and in-app notifications if a newer version is available.
- */
 @Singleton
 class UpdateManager @Inject constructor(
     private val aniListService: AniListService,
     private val animeDao: AnimeDao,
     private val notificationHelper: NotificationHelper
 ) {
-    // URL pointing to the raw JSON file containing the latest version metadata
-    private val updateUrl = "https://raw.githubusercontent.com/username/repo/main/version.json"
+    private val updateUrl = "https://raw.githubusercontent.com/Shiinoji/Anihub/main/version.json"
 
-    /**
-     * Checks if a newer version of the app is available on GitHub.
-     * Compares the remote version code with the local [BuildConfig.VERSION_CODE].
-     */
     suspend fun checkForUpdates() {
         try {
             val latestUpdate = aniListService.checkForUpdate(updateUrl)
             
             if (latestUpdate.versionCode > BuildConfig.VERSION_CODE) {
-                // Prevent duplicate notifications for the same version
                 val existingNotifications = animeDao.getNotifications().first()
                 val alreadyNotified = existingNotifications.any { 
                     it.type == "APP_UPDATE" && it.title.contains(latestUpdate.versionName) 
                 }
 
                 if (!alreadyNotified) {
-                    val message = latestUpdate.changelog
-                    
-                    // Trigger system-level update notification
                     notificationHelper.showUpdateNotification(
                         "App Update Available",
-                        "AniHub ${latestUpdate.versionName} is here! check the changelog."
+                        "AniHub ${latestUpdate.versionName} is here! Check the changelog."
                     )
 
-                    // Persist notification in the local database for the in-app inbox
                     animeDao.insertNotification(
                         NotificationEntity(
                             type = "APP_UPDATE",
                             title = "AniHub ${latestUpdate.versionName} is here!",
-                            message = message
+                            message = latestUpdate.changelog
                         )
                     )
                 }
             }
         } catch (e: Exception) {
-            // Silently fail if update check fails (e.g., no internet)
             e.printStackTrace()
         }
     }

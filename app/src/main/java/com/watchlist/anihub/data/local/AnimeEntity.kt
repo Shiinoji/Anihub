@@ -26,7 +26,7 @@ data class AnimeEntity(
     /** Current tracking status (e.g., Watching, Plan to Watch). */
     val status: WatchlistStatus = WatchlistStatus.PLAN_TO_WATCH,
     
-    /** Complete JSON representation of the [Media] object for offline detail viewing. */
+    /** Complete JSON representation of the Media object for offline detail viewing. */
     val detailJson: String? = null,
     
     /** The user's personal score for the anime (1.0 to 10.0). */

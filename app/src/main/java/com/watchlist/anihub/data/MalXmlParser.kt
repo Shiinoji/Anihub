@@ -1,7 +1,6 @@
 package com.watchlist.anihub.data
 
 import android.util.Xml
-import com.watchlist.anihub.data.local.AnimeEntity
 import com.watchlist.anihub.data.local.WatchlistStatus
 import org.xmlpull.v1.XmlPullParser
 import java.io.InputStream

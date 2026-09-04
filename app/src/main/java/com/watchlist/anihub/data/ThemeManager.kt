@@ -52,6 +52,8 @@ class ThemeManager @Inject constructor(
     private val watchlistSortKey = stringPreferencesKey("watchlist_sort")
     private val watchlistItemsPerRowKey = intPreferencesKey("watchlist_items_per_row")
     private val homeItemsPerRowKey = intPreferencesKey("home_items_per_row")
+    private val lastNotifiedUpdateVersionKey = stringPreferencesKey("last_notified_update_version")
+
 
     /**
      * Current [ThemeMode] (SYSTEM, LIGHT, DARK, AMOLED).
@@ -165,6 +167,13 @@ class ThemeManager @Inject constructor(
         preferences[homeItemsPerRowKey] ?: 2
     }.distinctUntilChanged()
 
+    /**
+     * Last notified update version.
+     */
+    val lastNotifiedUpdateVersion: Flow<String?> = context.dataStore.data.map { preferences ->
+        preferences[lastNotifiedUpdateVersionKey]
+    }.distinctUntilChanged()
+
     // Update methods
     suspend fun setThemeMode(mode: ThemeMode) {
         context.dataStore.edit { preferences ->
@@ -251,6 +260,12 @@ class ThemeManager @Inject constructor(
     suspend fun setWatchlistItemsPerRow(count: Int) {
         context.dataStore.edit { preferences ->
             preferences[watchlistItemsPerRowKey] = count
+        }
+    }
+
+    suspend fun setLastNotifiedUpdateVersion(version: String) {
+        context.dataStore.edit { preferences ->
+            preferences[lastNotifiedUpdateVersionKey] = version
         }
     }
 

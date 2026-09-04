@@ -44,7 +44,7 @@ class NotificationHelper @Inject constructor(
 
     /**
      * Displays a notification when a new episode of a watched anime airs.
-     * Tapping the notification opens the [AnimeDetailScreen] for the specific anime.
+     * Tapping the notification opens the AnimeDetailScreen for the specific anime.
      */
     fun showEpisodeNotification(animeTitle: String, episodeNumber: Int, animeId: Int) {
         val intent = Intent(context, MainActivity::class.java).apply {

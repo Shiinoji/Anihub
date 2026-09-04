@@ -3,7 +3,7 @@ package com.watchlist.anihub.ui
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.watchlist.anihub.data.ThemeManager
-import com.watchlist.anihub.data.UpdateManager
+import com.watchlist.anihub.domain.UpdateManager
 import com.watchlist.anihub.ui.theme.AiringFormat
 import com.watchlist.anihub.ui.theme.ColorPalette
 import com.watchlist.anihub.ui.theme.ScoreFormat
@@ -11,8 +11,10 @@ import com.watchlist.anihub.ui.theme.StaffNameLanguage
 import com.watchlist.anihub.ui.theme.ThemeMode
 import com.watchlist.anihub.ui.theme.TitleLanguage
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -27,6 +29,9 @@ class ThemeViewModel @Inject constructor(
     private val updateManager: UpdateManager,
 ) : ViewModel() {
     
+    private val _updateState = MutableStateFlow<UpdateState>(UpdateState.Idle)
+    val updateState: StateFlow<UpdateState> = _updateState.asStateFlow()
+
     // Observable preference states
     val themeMode = themeManager.themeMode.stateIn(
         viewModelScope, SharingStarted.WhileSubscribed(5000), ThemeMode.SYSTEM
@@ -150,7 +155,17 @@ class ThemeViewModel @Inject constructor(
      */
     fun checkForUpdates() {
         viewModelScope.launch {
-            updateManager.checkForUpdates()
+            _updateState.value = UpdateState.Checking
+            val updateUrl = updateManager.checkForUpdates()
+            if (updateUrl != null) {
+                _updateState.value = UpdateState.UpdateAvailable(updateUrl)
+            } else {
+                _updateState.value = UpdateState.UpToDate
+            }
         }
+    }
+
+    fun resetUpdateState() {
+        _updateState.value = UpdateState.Idle
     }
 }
