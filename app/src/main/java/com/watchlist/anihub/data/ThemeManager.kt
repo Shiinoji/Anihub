@@ -46,6 +46,11 @@ class ThemeManager @Inject constructor(
     private val showAiringCountdownKey = booleanPreferencesKey("show_airing_countdown")
     private val notificationsKey = booleanPreferencesKey("notifications_enabled")
     private val displayScaleKey = floatPreferencesKey("display_scale")
+    private val immersiveModeKey = booleanPreferencesKey("immersive_mode")
+    private val cacheSizeLimitKey = intPreferencesKey("cache_size_limit")
+    private val highQualityImagesKey = booleanPreferencesKey("high_quality_images")
+    private val defaultExternalLinkKey = stringPreferencesKey("default_external_link")
+    private val analyticsEnabledKey = booleanPreferencesKey("analytics_enabled")
 
     // Layout & Filtering Keys
     private val watchlistFilterKey = stringPreferencesKey("watchlist_filter")
@@ -136,6 +141,26 @@ class ThemeManager @Inject constructor(
      */
     val displayScale: Flow<Float> = context.dataStore.data.map { preferences ->
         preferences[displayScaleKey] ?: 1.0f
+    }.distinctUntilChanged()
+
+    val immersiveMode: Flow<Boolean> = context.dataStore.data.map { preferences ->
+        preferences[immersiveModeKey] ?: false
+    }.distinctUntilChanged()
+
+    val cacheSizeLimit: Flow<Int> = context.dataStore.data.map { preferences ->
+        preferences[cacheSizeLimitKey] ?: 50 // Default 50 MB
+    }.distinctUntilChanged()
+
+    val highQualityImages: Flow<Boolean> = context.dataStore.data.map { preferences ->
+        preferences[highQualityImagesKey] ?: false
+    }.distinctUntilChanged()
+
+    val defaultExternalLink: Flow<String?> = context.dataStore.data.map { preferences ->
+        preferences[defaultExternalLinkKey]
+    }.distinctUntilChanged()
+
+    val analyticsEnabled: Flow<Boolean> = context.dataStore.data.map { preferences ->
+        preferences[analyticsEnabledKey] ?: true
     }.distinctUntilChanged()
 
     /**
@@ -238,6 +263,36 @@ class ThemeManager @Inject constructor(
     suspend fun setDisplayScale(scale: Float) {
         context.dataStore.edit { preferences ->
             preferences[displayScaleKey] = scale
+        }
+    }
+
+    suspend fun setImmersiveMode(enabled: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[immersiveModeKey] = enabled
+        }
+    }
+
+    suspend fun setCacheSizeLimit(limit: Int) {
+        context.dataStore.edit { preferences ->
+            preferences[cacheSizeLimitKey] = limit
+        }
+    }
+
+    suspend fun setHighQualityImages(enabled: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[highQualityImagesKey] = enabled
+        }
+    }
+
+    suspend fun setDefaultExternalLink(link: String) {
+        context.dataStore.edit { preferences ->
+            preferences[defaultExternalLinkKey] = link
+        }
+    }
+
+    suspend fun setAnalyticsEnabled(enabled: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[analyticsEnabledKey] = enabled
         }
     }
 

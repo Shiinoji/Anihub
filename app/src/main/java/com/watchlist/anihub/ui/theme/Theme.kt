@@ -32,6 +32,7 @@ private fun getLightColorScheme(palette: ColorPalette): ColorScheme {
         ColorPalette.MATCHA -> arrayOf(MatchaAccent, MatchaSecondary, MatchaSurface)
         ColorPalette.CYBER -> arrayOf(CyberAccent, CyberSecondary, Color(0xFFFDFBFF)) // Use standard light bg for Cyber in light mode
         ColorPalette.AMBER -> arrayOf(AmberAccent, AmberSecondary, AmberSurface)
+        ColorPalette.ANILIST -> arrayOf(AniListBlue, AniListBlue.copy(alpha = 0.8f), Color(0xFFFDFBFF))
     }
 
     return lightColorScheme(
@@ -59,6 +60,7 @@ private fun getDarkColorScheme(palette: ColorPalette, isAmoled: Boolean): ColorS
         ColorPalette.MATCHA -> arrayOf(MatchaAccent, MatchaSecondary, DarkGrey)
         ColorPalette.CYBER -> arrayOf(CyberAccent, CyberSecondary, CyberSurface)
         ColorPalette.AMBER -> arrayOf(AmberAccent, AmberSecondary, DarkGrey)
+        ColorPalette.ANILIST -> arrayOf(AniListBlue, AniListBlue.copy(alpha = 0.8f), DarkGrey)
     }
 
     val background = if (isAmoled) DeepBlack else surface

@@ -223,6 +223,17 @@ fun MainContent(themeViewModel: ThemeViewModel, startScreen: Screen = Screen.Hom
                         onBackClick = { navigateBack() },
                         onAnimeClick = { navigateTo(Screen.AnimeDetail(it)) }
                     )
+                    Screen.SettingsAppearance,
+                    Screen.SettingsNotifications,
+                    Screen.SettingsAdvanced,
+                    Screen.SettingsAbout -> {
+                        // Placeholder or navigate to a generic settings screen
+                        SettingsScreen(
+                            onBackClick = { navigateBack() },
+                            onHistoryClick = { navigateTo(Screen.History) },
+                            viewModel = themeViewModel
+                        )
+                    }
                 }
             }
         }

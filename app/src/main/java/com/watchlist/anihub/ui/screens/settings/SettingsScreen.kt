@@ -8,7 +8,6 @@ import android.os.PowerManager
 import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.*
@@ -65,9 +64,13 @@ fun SettingsScreen(
     val adultContent by viewModel.adultContent.collectAsState()
     val showAiringCountdown by viewModel.showAiringCountdown.collectAsState()
     val notificationsEnabled by viewModel.notificationsEnabled.collectAsState()
-    val dynamicTheme by viewModel.dynamicTheme.collectAsState()
     val displayScale by viewModel.displayScale.collectAsState()
-    val updateState by viewModel.updateState.collectAsState()
+    val dynamicTheme by viewModel.dynamicTheme.collectAsState()
+    val analyticsEnabled by viewModel.analyticsEnabled.collectAsState()
+    val immersiveMode by viewModel.immersiveMode.collectAsState()
+    val cacheSizeLimit by viewModel.cacheSizeLimit.collectAsState()
+    val highQualityImages by viewModel.highQualityImages.collectAsState()
+    val defaultExternalLink by viewModel.defaultExternalLink.collectAsState()
     val context = LocalContext.current
 
     val dataViewModel: DataManagementViewModel = hiltViewModel()
@@ -153,7 +156,7 @@ fun SettingsScreen(
             labelProvider = { "${(it * 100).toInt()}%" }
         )
     }
-    
+
     if (showClearCacheDialog) {
         AlertDialog(
             onDismissRequest = { showClearCacheDialog = false },
@@ -180,13 +183,13 @@ fun SettingsScreen(
         snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
         topBar = {
             LargeTopAppBar(
-                title = { 
+                title = {
                     Text(
-                        "Settings", 
+                        "Settings",
                         style = MaterialTheme.typography.headlineMedium.copy(fontSize = 24.sp),
                         fontWeight = FontWeight.Medium,
                         letterSpacing = (-1).sp
-                    ) 
+                    )
                 },
                 navigationIcon = {
                     IconButton(
@@ -216,10 +219,10 @@ fun SettingsScreen(
             // SECTION: PERSONALIZATION (PREMIUM BENTO STYLE)
             SettingsCard(title = "Personalization", icon = Icons.Default.Palette) {
                 SettingsSubHeader(title = "Theme Mode")
-                
+
                 Row(
                     modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     val themeOptions = listOf(
                         Triple("System", ThemeMode.SYSTEM, Icons.Default.SettingsSuggest),
@@ -227,23 +230,19 @@ fun SettingsScreen(
                         Triple("Dark", ThemeMode.DARK, Icons.Default.DarkMode),
                         Triple("OLED", ThemeMode.AMOLED, Icons.Default.BrightnessLow)
                     )
-                    
+
                     themeOptions.forEach { (label, mode, icon) ->
-                        Box(modifier = Modifier.padding(bottom = 8.dp)) {
-                            ThemePreviewCard(
-                                label = label,
-                                selected = themeMode == mode,
-                                onClick = { viewModel.setThemeMode(mode) },
-                                surfaceColor = when(mode) {
-                                    ThemeMode.LIGHT -> Color.White
-                                    ThemeMode.DARK -> Color(0xFF1A1C1E)
-                                    ThemeMode.AMOLED -> Color.Black
-                                    else -> MaterialTheme.colorScheme.surfaceVariant
-                                },
-                                accentColor = MaterialTheme.colorScheme.primary,
-                                icon = icon
-                            )
-                        }
+                        ThemePreviewCard(
+                            label = label,
+                            selected = themeMode == mode,
+                            onClick = { viewModel.setThemeMode(mode) },
+                            surfaceColor = when(mode) {
+                                ThemeMode.LIGHT -> Color.White
+                                ThemeMode.DARK -> Color(0xFF1A1C1E)
+                                ThemeMode.AMOLED -> Color.Black
+                                else -> MaterialTheme.colorScheme.surfaceVariant
+                            }
+                        )
                     }
                 }
 
@@ -283,14 +282,14 @@ fun SettingsScreen(
             SettingsCard(title = "Preferences", icon = Icons.Default.Tune) {
                 SettingsSubHeader(title = "Localization")
                 SettingsRow(
-                    title = "Title Language", 
-                    value = titleLanguage.name.lowercase().replaceFirstChar { it.uppercase() }, 
+                    title = "Title Language",
+                    value = titleLanguage.name.lowercase().replaceFirstChar { it.uppercase() },
                     onClick = { showTitleDialog = true },
                     icon = ImageVector.vectorResource(R.drawable.languages)
                 )
                 SettingsRow(
-                    title = "Staff Names", 
-                    value = staffLanguage.name.replace("_", " ").lowercase().replaceFirstChar { it.uppercase() }, 
+                    title = "Staff Names",
+                    value = staffLanguage.name.replace("_", " ").lowercase().replaceFirstChar { it.uppercase() },
                     onClick = { showStaffDialog = true },
                     icon = Icons.Default.PersonSearch
                 )
@@ -298,14 +297,14 @@ fun SettingsScreen(
                 Spacer(modifier = Modifier.height(16.dp))
                 SettingsSubHeader(title = "Display")
                 SettingsRow(
-                    title = "Score Format", 
-                    value = scoreFormat.name.replace("POINT_", "Point ").replace("_", ".").lowercase().replaceFirstChar { it.uppercase() }, 
+                    title = "Score Format",
+                    value = scoreFormat.name.replace("POINT_", "Point ").replace("_", ".").lowercase().replaceFirstChar { it.uppercase() },
                     onClick = { showScoreDialog = true },
                     icon = ImageVector.vectorResource(R.drawable.star)
                 )
                 SettingsRow(
-                    title = "Airing Format", 
-                    value = airingFormat.name.lowercase().replaceFirstChar { it.uppercase() }, 
+                    title = "Airing Format",
+                    value = airingFormat.name.lowercase().replaceFirstChar { it.uppercase() },
                     onClick = { showAiringDialog = true },
                     icon = ImageVector.vectorResource(R.drawable.calendar)
                 )
@@ -315,7 +314,7 @@ fun SettingsScreen(
                     onClick = { showScaleDialog = true },
                     icon = ImageVector.vectorResource(R.drawable.scaling)
                 )
-                
+
                 Spacer(modifier = Modifier.height(16.dp))
                 SettingsSubHeader(title = "View History")
                 SettingsRow(
@@ -337,35 +336,58 @@ fun SettingsScreen(
                     onCheckedChange = { viewModel.setNotificationsEnabled(it) },
                     icon = Icons.Default.Sync
                 )
-                
+
                 SettingsSwitchRow(
-                    title = "Airing Countdown", 
+                    title = "Airing Countdown",
                     description = "Show live time until next episode",
-                    checked = showAiringCountdown, 
+                    checked = showAiringCountdown,
                     onCheckedChange = { viewModel.setShowAiringCountdown(it) },
                     icon = ImageVector.vectorResource(R.drawable.moon)
                 )
 
                 SettingsSwitchRow(
-                    title = "Adult Content (R18+)", 
-                    checked = adultContent, 
+                    title = "Adult Content (R18+)",
+                    checked = adultContent,
                     onCheckedChange = { viewModel.setAdultContent(it) },
                     icon = Icons.Default.LockOpen
                 )
 
                 SettingsSwitchRow(
-                    title = "Dynamic Theme",
-                    checked = dynamicTheme,
-                    onCheckedChange = { viewModel.setDynamicTheme(it) },
-                    icon = Icons.Default.Palette
+                    title = "Immersive Mode",
+                    description = "Hide status bar",
+                    checked = immersiveMode,
+                    onCheckedChange = { viewModel.setImmersiveMode(it) },
+                    icon = Icons.Default.Fullscreen
+                )
+
+                SettingsSwitchRow(
+                    title = "Analytics",
+                    description = "Help improve AniHub",
+                    checked = analyticsEnabled,
+                    onCheckedChange = { viewModel.setAnalyticsEnabled(it) },
+                    icon = Icons.Default.Analytics
+                )
+
+                SettingsSwitchRow(
+                    title = "High Quality Images",
+                    description = "Load higher resolution image assets",
+                    checked = highQualityImages,
+                    onCheckedChange = { viewModel.setHighQualityImages(it) },
+                    icon = Icons.Default.Image
                 )
 
                 HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f))
-                
+
                 SettingsSubHeader(title = "Data Management")
                 SettingsRow(title = "Import from MAL", onClick = { malPickerLauncher.launch("text/xml") }, icon = Icons.Default.FileUpload)
                 SettingsRow(title = "Export Watchlist", onClick = { exportLauncher.launch("anihub_export.xml") }, icon = Icons.Default.FileDownload)
                 SettingsRow(title = "Clear Cache", value = cacheSize, onClick = { showClearCacheDialog = true }, icon = Icons.Default.DeleteSweep)
+                SettingsRow(
+                    title = "Cache Size Limit",
+                    value = "$cacheSizeLimit MB",
+                    onClick = { /* Could show a dialog here */ },
+                    icon = Icons.Default.Storage
+                )
             }
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -376,6 +398,17 @@ fun SettingsScreen(
             Spacer(modifier = Modifier.height(32.dp))
         }
     }
+}
+
+@Composable
+fun SettingsSubHeader(title: String) {
+    Text(
+        text = title,
+        style = MaterialTheme.typography.titleMedium,
+        color = MaterialTheme.colorScheme.primary,
+        fontWeight = FontWeight.Bold,
+        modifier = Modifier.padding(bottom = 8.dp)
+    )
 }
 
 @Composable
@@ -402,8 +435,8 @@ fun SettingsCard(
                     Spacer(modifier = Modifier.width(12.dp))
                 }
                 Text(
-                    text = title, 
-                    style = MaterialTheme.typography.titleLarge, 
+                    text = title,
+                    style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Medium,
                     letterSpacing = (-0.5).sp
                 )
@@ -449,7 +482,7 @@ fun SettingsRow(
                 }
                 Spacer(modifier = Modifier.width(16.dp))
             }
-            
+
             Column(modifier = Modifier.weight(1f)) {
                 Text(title, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium)
                 if (description != null) {
@@ -462,8 +495,8 @@ fun SettingsRow(
                     shape = RoundedCornerShape(8.dp)
                 ) {
                     Text(
-                        text = value, 
-                        style = MaterialTheme.typography.labelMedium, 
+                        text = value,
+                        style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
                         fontWeight = FontWeight.Medium
@@ -505,7 +538,7 @@ fun SettingsSwitchRow(
                 }
                 Spacer(modifier = Modifier.width(16.dp))
             }
-            
+
             Column {
                 Text(title, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium)
                 if (description != null) {
@@ -529,34 +562,27 @@ fun ThemePreviewCard(
     label: String,
     selected: Boolean,
     onClick: () -> Unit,
-    surfaceColor: Color,
-    accentColor: Color,
-    icon: ImageVector? = null
+    surfaceColor: Color
 ) {
     val scale by animateFloatAsState(if (selected) 1.05f else 1f, spring(dampingRatio = 0.6f))
-    val elevation by animateDpAsState(if (selected) 8.dp else 0.dp)
 
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier.width(76.dp)
+        modifier = Modifier.padding(4.dp).width(64.dp)
     ) {
-        Card(
-            onClick = onClick,
-            modifier = Modifier.height(100.dp).fillMaxWidth().scale(scale),
-            shape = RoundedCornerShape(14.dp),
-            colors = CardDefaults.cardColors(containerColor = surfaceColor),
-            border = if (selected) BorderStroke(2.dp, MaterialTheme.colorScheme.primary) else null,
-            elevation = CardDefaults.cardElevation(defaultElevation = elevation)
+        Box(
+            modifier = Modifier
+                .size(64.dp)
+                .scale(scale)
+                .then(
+                    if (selected) Modifier.border(2.dp, MaterialTheme.colorScheme.primary, CircleShape)
+                    else Modifier.border(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f), CircleShape)
+                )
+                .clip(CircleShape)
+                .background(surfaceColor)
+                .clickable { onClick() },
+            contentAlignment = Alignment.Center
         ) {
-            Box(modifier = Modifier.fillMaxSize().padding(8.dp)) {
-                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Box(modifier = Modifier.size(width = 30.dp, height = 6.dp).clip(CircleShape).background(accentColor))
-                    Box(modifier = Modifier.size(width = 20.dp, height = 4.dp).clip(CircleShape).background(accentColor.copy(alpha = 0.4f)))
-                }
-                if (icon != null) {
-                    Icon(icon, null, modifier = Modifier.align(Alignment.Center).size(24.dp), tint = accentColor)
-                }
-            }
         }
         Spacer(modifier = Modifier.height(8.dp))
         Text(
@@ -578,7 +604,7 @@ fun PalettePreviewCard(
     icon: ImageVector? = null
 ) {
     val scale by animateFloatAsState(if (selected) 1.1f else 1f, spring(dampingRatio = 0.5f))
-    
+
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier.width(64.dp)
@@ -627,7 +653,7 @@ fun AboutProfileCard(viewModel: ThemeViewModel) {
             modifier = Modifier.fillMaxWidth(),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            val shiinojiResId = R.drawable.shiinoji 
+            val shiinojiResId = R.drawable.shiinoji
 
             Box(
                 modifier = Modifier
@@ -647,11 +673,11 @@ fun AboutProfileCard(viewModel: ThemeViewModel) {
                     Icon(imageVector = ImageVector.vectorResource(R.drawable.user), contentDescription = null, modifier = Modifier.size(48.dp), tint = MaterialTheme.colorScheme.onPrimaryContainer)
                 }
             }
-            
+
             Spacer(modifier = Modifier.height(16.dp))
             Text("Shiinoji", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Medium)
             Text("Lead Developer", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Medium)
-            
+
             Spacer(modifier = Modifier.height(20.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                 SocialButton(R.drawable.github_142_svgrepo_com) {
@@ -665,7 +691,7 @@ fun AboutProfileCard(viewModel: ThemeViewModel) {
         }
 
         Spacer(modifier = Modifier.height(32.dp))
-        
+
         Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(ImageVector.vectorResource(R.drawable.anilist_svgrepo_com), null, modifier = Modifier.size(24.dp), tint = Color(0xFF02A9FF))
             Spacer(modifier = Modifier.width(12.dp))
@@ -685,7 +711,7 @@ fun AboutProfileCard(viewModel: ThemeViewModel) {
             Column {
                 Text("AniHub v${BuildConfig.VERSION_NAME}", style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium)
                 Text("Build ${BuildConfig.VERSION_CODE}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                
+
                 LaunchedEffect(updateState) {
                     when (val state = updateState) {
                         is UpdateState.UpdateAvailable -> {
@@ -730,18 +756,6 @@ fun SocialButton(iconRes: Int, onClick: () -> Unit) {
     ) {
         Icon(ImageVector.vectorResource(iconRes), null, modifier = Modifier.size(22.dp), tint = MaterialTheme.colorScheme.onSurface)
     }
-}
-
-
-@Composable
-fun SettingsSubHeader(title: String) {
-    Text(
-        text = title,
-        style = MaterialTheme.typography.labelLarge,
-        color = MaterialTheme.colorScheme.primary,
-        fontWeight = FontWeight.Medium,
-        modifier = Modifier.padding(bottom = 8.dp)
-    )
 }
 
 @Composable

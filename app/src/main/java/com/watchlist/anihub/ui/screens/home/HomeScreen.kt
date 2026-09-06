@@ -20,6 +20,7 @@ import com.watchlist.anihub.data.local.WatchlistStatus
 import com.watchlist.anihub.data.remote.Media
 import com.watchlist.anihub.ui.UiState
 import com.watchlist.anihub.ui.components.SimpleAnimeCard
+import com.watchlist.anihub.ui.components.TrendingAnimeCard
 import com.watchlist.anihub.ui.components.SimpleAnimeCardSkeleton
 import com.watchlist.anihub.ui.components.ErrorView
 import com.watchlist.anihub.ui.theme.LocalTitleLanguage
@@ -57,12 +58,12 @@ fun HomeScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { 
+                title = {
                     Text(
-                        "Home", 
+                        "Home",
                         style = MaterialTheme.typography.headlineSmall,
                         fontWeight = FontWeight.Bold
-                    ) 
+                    )
                 },
                 actions = {
                     IconButton(onClick = onNotificationsClick) {
@@ -90,10 +91,10 @@ fun HomeScreen(
             val errorState = states.asSequence().filterIsInstance<UiState.Error>().firstOrNull()
 
             if (errorState != null) {
-                val isConnectionError = errorState.message.contains("network", ignoreCase = true) || 
+                val isConnectionError = errorState.message.contains("network", ignoreCase = true) ||
                                       errorState.message.contains("internet", ignoreCase = true) ||
                                       errorState.message.contains("connection", ignoreCase = true)
-                
+
                 ErrorView(
                     message = errorState.message,
                     onRetry = { viewModel.refresh() },
@@ -109,7 +110,7 @@ fun HomeScreen(
                     contentPadding = PaddingValues(bottom = 16.dp)
                 ) {
                     // Standard horizontal sections
-                    item { AnimeSection("Trending Now", trendingState, onAnimeClick, watchlistMap) }
+                    item { AnimeSection("Trending Now", trendingState, onAnimeClick, watchlistMap, isTrending = true) }
                     item { AnimeSection("Most Popular", popularState, onAnimeClick, watchlistMap) }
                     item { AnimeSection("Seasonal Anime", seasonalState, onAnimeClick, watchlistMap) }
 
@@ -129,9 +130,9 @@ fun HomeScreen(
                         displayScale <= 1.0f -> 3
                         else -> 2
                     }
-                    
+
                     val chunkedList = discoverAnime.chunked(itemsPerRow)
-                    
+
                     itemsIndexed(chunkedList) { index, rowItems ->
                         // Pagination trigger: load more when reaching the end
                         if (index >= (chunkedList.size - 2)) {
@@ -139,7 +140,7 @@ fun HomeScreen(
                                 viewModel.loadDiscoverNextPage()
                             }
                         }
-                        
+
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -189,7 +190,8 @@ fun AnimeSection(
     title: String,
     state: UiState<List<Media>>,
     onAnimeClick: (Int) -> Unit,
-    watchlistMap: Map<Int, WatchlistStatus> = emptyMap()
+    watchlistMap: Map<Int, WatchlistStatus> = emptyMap(),
+    isTrending: Boolean = false
 ) {
     val titleLanguage = LocalTitleLanguage.current
     Column(modifier = Modifier.padding(vertical = 8.dp)) {
@@ -215,13 +217,23 @@ fun AnimeSection(
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     items(state.data) { anime ->
-                        SimpleAnimeCard(
-                            title = anime.title.getDisplayTitle(titleLanguage),
-                            imageUrl = anime.coverImage.extraLarge ?: anime.coverImage.large ?: "",
-                            onClick = { onAnimeClick(anime.id) },
-                            status = watchlistMap[anime.id]?.getDisplayName(),
-                            modifier = Modifier.width(140.dp)
-                        )
+                        if (isTrending) {
+                            TrendingAnimeCard(
+                                title = anime.title.getDisplayTitle(titleLanguage),
+                                imageUrl = anime.coverImage.extraLarge ?: anime.coverImage.large ?: "",
+                                score = anime.averageScore?.toDouble()?.div(10.0),
+                                onClick = { onAnimeClick(anime.id) },
+                                modifier = Modifier.width(160.dp)
+                            )
+                        } else {
+                            SimpleAnimeCard(
+                                title = anime.title.getDisplayTitle(titleLanguage),
+                                imageUrl = anime.coverImage.extraLarge ?: anime.coverImage.large ?: "",
+                                onClick = { onAnimeClick(anime.id) },
+                                status = watchlistMap[anime.id]?.getDisplayName(),
+                                modifier = Modifier.width(140.dp)
+                            )
+                        }
                     }
                 }
             }

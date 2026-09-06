@@ -73,6 +73,21 @@ class ThemeViewModel @Inject constructor(
     val displayScale: StateFlow<Float> = themeManager.displayScale.stateIn(
         viewModelScope, SharingStarted.WhileSubscribed(5000), 1.0f
     )
+    val immersiveMode: StateFlow<Boolean> = themeManager.immersiveMode.stateIn(
+        viewModelScope, SharingStarted.WhileSubscribed(5000), false
+    )
+    val cacheSizeLimit: StateFlow<Int> = themeManager.cacheSizeLimit.stateIn(
+        viewModelScope, SharingStarted.WhileSubscribed(5000), 50
+    )
+    val highQualityImages: StateFlow<Boolean> = themeManager.highQualityImages.stateIn(
+        viewModelScope, SharingStarted.WhileSubscribed(5000), false
+    )
+    val defaultExternalLink: StateFlow<String?> = themeManager.defaultExternalLink.stateIn(
+        viewModelScope, SharingStarted.WhileSubscribed(5000), null
+    )
+    val analyticsEnabled: StateFlow<Boolean> = themeManager.analyticsEnabled.stateIn(
+        viewModelScope, SharingStarted.WhileSubscribed(5000), true
+    )
 
     // Update methods for persisting preferences
     fun setThemeMode(mode: ThemeMode) {
@@ -147,6 +162,36 @@ class ThemeViewModel @Inject constructor(
     fun setDisplayScale(scale: Float) {
         viewModelScope.launch {
             themeManager.setDisplayScale(scale)
+        }
+    }
+
+    fun setImmersiveMode(enabled: Boolean) {
+        viewModelScope.launch {
+            themeManager.setImmersiveMode(enabled)
+        }
+    }
+
+    fun setCacheSizeLimit(limit: Int) {
+        viewModelScope.launch {
+            themeManager.setCacheSizeLimit(limit)
+        }
+    }
+
+    fun setHighQualityImages(enabled: Boolean) {
+        viewModelScope.launch {
+            themeManager.setHighQualityImages(enabled)
+        }
+    }
+
+    fun setDefaultExternalLink(link: String) {
+        viewModelScope.launch {
+            themeManager.setDefaultExternalLink(link)
+        }
+    }
+
+    fun setAnalyticsEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            themeManager.setAnalyticsEnabled(enabled)
         }
     }
 

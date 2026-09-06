@@ -8,6 +8,10 @@ sealed interface Screen {
     @Serializable data object Search : Screen
     @Serializable data object Watchlist : Screen
     @Serializable data object Settings : Screen
+    @Serializable data object SettingsAppearance : Screen
+    @Serializable data object SettingsNotifications : Screen
+    @Serializable data object SettingsAdvanced : Screen
+    @Serializable data object SettingsAbout : Screen
     @Serializable data object History : Screen
     @Serializable data object Notifications : Screen
     @Serializable data object Calendar : Screen
