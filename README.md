@@ -17,7 +17,7 @@
     <img src="https://img.shields.io/github/stars/Shiinoji/Anihub?style=flat-square" alt="GitHub Stars">
   </a>
   <a href="https://github.com/Shiinoji/Anihub/blob/master/LICENSE">
-    <img src="https://img.shields.io/github/license/Shiinoji/Anihub?style=flat-square" alt="License">
+    <img src="https://img.shields.io/github/license/Shiinoji/Anihub?style=flat-square" alt="LICENSE">
   </a>
 </p>
 
